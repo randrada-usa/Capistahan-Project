@@ -1,6 +1,7 @@
 """
 main.py
 GameFrick Project - Production Version with Persistent Camera Feed
+MODIFIED FOR CAPIZTAHAN: Theme-aware, time-based gameplay, corner chibi support
 """
 
 import sys
@@ -49,8 +50,8 @@ class Game:
                 print(f"[WARNING] Failed to load window icon: {e}")
 
         print("Loading assets...")
-        # AssetManager handles path fixes for PyInstaller internally
-        self.assets = AssetManager().load_all()
+        # Initialize with default theme - will switch after wheel selection
+        self.assets = AssetManager(theme='food').load_all()
         
         self.gesture_controller = None
         self.use_cv = False
@@ -61,6 +62,10 @@ class Game:
         
         self.hand_lost_timer = 0
         self.running = True
+        
+        # Game timing for time-based mode (Capiztahan requirement)
+        self.game_duration = 60.0  # 60 seconds per round
+        self.time_remaining = self.game_duration
 
         # Initialize the CV window early so it can be moved to a second monitor
         if CV_AVAILABLE:
@@ -69,17 +74,35 @@ class Game:
         # START CAMERA IMMEDIATELY so it's available on all screens
         self.init_cv()
 
-    def reset_game(self):
-        """Reset game state for new game round."""
+    def reset_game(self, theme=None):
+        """
+        Reset game state for new game round, optionally switching theme.
+        Time-based mode: 60 second countdown per category.
+        """
+        
+        # THEME SWITCHING: If new theme provided, reload assets
+        if theme and theme != self.assets.get_theme_manager().get_theme():
+            print(f"[Game] Switching theme to: {theme}")
+            self.assets.change_theme(theme)
+        
+        # Reset game components with new assets
         self.player = Player(self.screen_w, self.screen_h, self.assets)
         self.object_manager = ObjectManager(self.screen_w, self.assets)
         self.game_state = GameState(self.assets)
         self.hand_lost_timer = 0
         
-        # Load and play background music
-        if 'ingame' in self.assets.music_paths:
-            pygame.mixer.music.load(self.assets.music_paths['ingame'])
-            pygame.mixer.music.play(-1, fade_ms=2000)
+        # Reset timer for time-based gameplay
+        self.time_remaining = self.game_duration
+        
+        # Load and play category-specific background music
+        # Note: AssetManager now handles themed music paths
+        theme_music = self.assets.music_paths.get('ingame')
+        if theme_music and os.path.exists(theme_music):
+            try:
+                pygame.mixer.music.load(theme_music)
+                pygame.mixer.music.play(-1, fade_ms=2000)
+            except Exception as e:
+                print(f"[WARNING] Could not play ingame music: {e}")
         
         if self.gesture_controller:
             self.gesture_controller.reset()
@@ -115,9 +138,16 @@ class Game:
         return True
 
     def update(self):
-        """Update game logic, physics, and CV input."""
+        """Update game logic, physics, CV input, and timer."""
         if self.game_state.game_over:
             return None, None
+        
+        # TIME-BASED GAMEPLAY: Count down timer
+        dt = 1/60  # Fixed timestep
+        self.time_remaining -= dt
+        if self.time_remaining <= 0:
+            self.time_remaining = 0
+            self.game_state.trigger_game_over()  # Time's up!
         
         player_x = None
         if self.use_cv and self.gesture_controller:
@@ -125,19 +155,19 @@ class Game:
             player_x = self.gesture_controller.update()
             
             if player_x is None:
-                self.hand_lost_timer += 0.016
+                self.hand_lost_timer += dt
             else:
-                self.hand_lost_timer = max(0, self.hand_lost_timer - 0.032)
+                self.hand_lost_timer = max(0, self.hand_lost_timer - dt * 2)
         else:
             # Fallback to mouse if CV is disabled
             player_x, _ = pygame.mouse.get_pos()
 
         # Update player position with smoothing
         self.player.set_target_x(player_x)
-        self.player.update(1/60)
+        self.player.update(dt)
         
         # Update falling objects (speed increases with score)
-        self.object_manager.update(1/60, self.game_state.score)
+        self.object_manager.update(dt, self.game_state.score)
         
         # Collision detection
         caught, missed_good = self.object_manager.check_collisions(self.player.get_hitbox())
@@ -150,8 +180,8 @@ class Game:
         return player_x, self.player.y
 
     def render(self, player_x, player_y):
-        """Render all graphics and the separate CV window."""
-        # Draw Background
+        """Render all graphics, timer, and the separate CV window."""
+        # Draw Background (themed)
         bg = self.assets.get('background')
         if bg:
             self.screen.blit(bg, (0, 0))
@@ -161,6 +191,14 @@ class Game:
         # Render Game Objects
         self.object_manager.render(self.screen)
         self.player.render(self.screen)
+        
+        # Render corner chibi (if available in assets)
+        corner_chibi = self.assets.get('corner_chibi')
+        if corner_chibi:
+            # Position in bottom-right corner
+            chibi_rect = corner_chibi.get_rect(bottomright=(self.screen_w - 20, self.screen_h - 20))
+            self.screen.blit(corner_chibi, chibi_rect)
+        
         self._draw_hud()
 
         # Draw Wood Borders (Decorative/Gameplay limit)
@@ -185,11 +223,18 @@ class Game:
                 cv2.waitKey(1)
 
     def _draw_hud(self):
-        """Draws Score, High Score, and Heart (Health) Sprites."""
-        # Score UI
+        """Draws Score, Timer, High Score, and Heart (Health) Sprites."""
+        # Score UI (Top Right)
         score_text = self.font_large.render(f"Score: {self.game_state.score}", True, (255, 255, 255))
         self.screen.blit(score_text, (self.screen_w - 550, 80))
         
+        # TIME DISPLAY (Top Center - prominent for time-based mode)
+        timer_color = (255, 255, 255) if self.time_remaining > 10 else (255, 50, 50)  # Red when low
+        timer_text = self.font_large.render(f"{int(self.time_remaining)}", True, timer_color)
+        timer_rect = timer_text.get_rect(center=(self.screen_w // 2, 80))
+        self.screen.blit(timer_text, timer_rect)
+        
+        # High Score (Below Score)
         high_text = self.font_small.render(f"Best: {self.game_state.high_score}", True, (150, 75, 0))
         self.screen.blit(high_text, (self.screen_w - 550, 135))
         
@@ -203,24 +248,29 @@ class Game:
         if self.hand_lost_timer > 0.1:
             if (pygame.time.get_ticks() // 200) % 2 == 0:
                 warning = self.font_large.render("! HAND LOST !", True, (255, 50, 50))
-                self.screen.blit(warning, warning.get_rect(center=(self.screen_w // 2, 100)))
+                self.screen.blit(warning, warning.get_rect(center=(self.screen_w // 2, 150)))
 
     def run(self):
         """The main execution flow with persistent camera."""
         try:
             while self.running:
-                # 1. Start Screen Menu (Camera is already running!)
-                # Pass gesture_controller so it can update the CV window
+                # 1. Start Screen Menu
                 if not show_start_screen(self.screen, self.screen_w, self.screen_h, 
-                                       gesture_controller=self.gesture_controller if self.use_cv else None):
+                                    gesture_controller=self.gesture_controller if self.use_cv else None):
                     self.running = False
                     break
 
-                # 2. Reset Game Logic (CV already initialized)
-                self.reset_game()
+                # 2. WHEEL SCREEN - Get category from Jen's implementation
+                # TODO: Import and call Jen's wheel_screen when ready
+                # selected_category = show_wheel_screen(...)
+                # For now, placeholder:
+                selected_category = 'food'  # REPLACE WITH JEN'S RETURN VALUE
+                
+                # 3. Reset Game Logic with selected theme
+                self.reset_game(theme=selected_category)
                 game_active = True
 
-                # 3. Gameplay Loop
+                # 4. Gameplay Loop (Time-based)
                 while game_active and self.running:
                     if not self.handle_events():
                         break
@@ -232,10 +282,10 @@ class Game:
                     if self.game_state.game_over:
                         game_active = False
 
-                # 4. Game Over Screen (Camera stays on!)
+                # 5. Game Over Screen (Camera stays on!)
                 if self.running:
                     pygame.mixer.music.fadeout(1000)
-                    snapshot = self.screen.copy() # Background for end screen blur effect
+                    snapshot = self.screen.copy()  # Background for end screen blur effect
                     
                     # Pass gesture_controller to keep camera feed live
                     retry = show_end_screen(
