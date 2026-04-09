@@ -41,6 +41,18 @@ class FallingItem:
         self.size = 60
         self.rotation = 0
         self.rotation_speed = random.uniform(-2, 2)
+
+                # NEW: Add rarity (Gio sets this based on weights)
+        self.rarity = rarity  # Rarity enum or None for legacy
+        
+        # Visual indicator based on rarity
+        self.glow_color = None
+        if rarity:
+            if rarity.value == "ultra_rare":
+                self.glow_color = (255, 215, 0)  # Gold glow
+            elif rarity.value == "rare":
+                self.glow_color = (100, 200, 255)  # Blue glow
+
         
         # Effect timer for Jen's visual hooks
         self.glow_pulse = 0.0

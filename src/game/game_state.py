@@ -1,6 +1,20 @@
+"""
+game_state.py - MODIFIED FOR CAPIZTAHAN
+Added: Event system for Jen's player expressions
+Keeps: Original score/lives management
+"""
+
 import json
 import os
 from datetime import datetime
+from enum import Enum
+
+
+class Rarity(Enum):
+    """NEW: Gacha rarity levels"""
+    COMMON = "common"
+    RARE = "rare"
+    ULTRA_RARE = "ultra_rare"
 from src.game.wish_system import WishSystem
 
 
@@ -59,6 +73,29 @@ class GameState:
         # High scores
         self.high_scores = self._load_high_scores()
         self.high_score = self.high_scores[0]['score'] if self.high_scores else 0
+        
+        # === NEW: Event system for Jen ===
+        self._events = {
+            'ultra_rare_caught': False,
+            'rare_caught': False,
+            'common_caught': False,
+            'missed': False,
+            'screen_flash': False
+        }
+        
+        # === NEW: Rarity weights for Gio ===
+        self.rarity_weights = {
+            Rarity.COMMON: 0.70,
+            Rarity.RARE: 0.25,
+            Rarity.ULTRA_RARE: 0.05
+        }
+        
+        # Score values by rarity
+        self.rarity_scores = {
+            Rarity.COMMON: 10,
+            Rarity.RARE: 50,
+            Rarity.ULTRA_RARE: 100
+        }
     
     def _load_high_scores(self):
         try:
