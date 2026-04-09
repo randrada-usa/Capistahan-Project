@@ -166,9 +166,17 @@ class WheelScreen:
         random_offset = random.randint(0, 359)
         self.target_rotation = full_rotations + random_offset
         
-        final_angle = (self.target_rotation + 270) % 360
+        # Changed from 270 to 15 to align with FOOD icon at -15°
+        # When wheel rotates +15°, FOOD (-15°) reaches top (0°)
+        final_angle = (self.target_rotation + 15) % 360
         segment_index = int(final_angle / self.segment_angle) % 3
+        
+        # Reordered: FOOD (0-120°), PEOPLE (120-240°), CULTURE (240-360°)
+        # This matches the physical positions when each icon reaches the top
+        self.categories = [Category.FOOD, Category.PEOPLE, Category.CULTURE]
         self.selected_category = self.categories[segment_index]
+        
+        print(f"[Wheel] Target rotation: {self.target_rotation}°, Final angle: {final_angle}°, Segment: {segment_index}, Selected: {self.selected_category.value}")
     
     def update(self, dt):
         current_time = pygame.time.get_ticks()
