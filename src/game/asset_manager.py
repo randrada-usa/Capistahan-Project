@@ -66,6 +66,13 @@ class AssetManager:
         theme = self.theme_manager.get_theme()
         log(f"[AssetManager] Loading assets for theme: {theme}")
         log(f"[AssetManager] Base path: {self.base_path}")
+
+        # --- WHEEL SCREEN ASSETS (Shared) ---
+        self._load_shared('wheel_base', os.path.join("ui", "wheel.png"))
+        # Increased icon size from 100 to 140
+        self._load_shared('perla_food', os.path.join("ui", "perla_food.png"), target_size=(285, 285))
+        self._load_shared('perla_culture', os.path.join("ui", "perla_culture.png"), target_size=(285, 285))
+        self._load_shared('perla_people', os.path.join("ui", "perla_people.png"), target_size=(285, 285))
         
         # --- THEME-SPECIFIC BACKGROUNDS ---
         self._load_themed('background', 
