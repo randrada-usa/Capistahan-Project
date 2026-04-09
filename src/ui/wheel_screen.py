@@ -286,20 +286,50 @@ class WheelScreen:
                 screen.blit(scaled_icon, icon_rect)
     
     def _draw_pointer(self, screen):
-        base_y = self.center_y - self.wheel_radius * self.current_scale * self.wheel_scale - 20
-        pointer_y = base_y + self.pointer_bounce * self.current_scale
+        # 1 o'clock position: 330 degrees (30 degrees clockwise from top)
+        # 0=right, 90=down, 180=left, 270=up, 330=1 o'clock
+        angle = math.radians(300)
+        
+        # Distance from center: wheel radius + margin to sit outside
+        distance = self.wheel_radius * self.current_scale * self.wheel_scale + 200
+        
+        # Base position at 1 o'clock
+        base_x = self.center_x + math.cos(angle) * distance
+        base_y = self.center_y + math.sin(angle) * distance
+        
+        # Bounce effect (radial - toward/away from center)
+        bounce = self.pointer_bounce * self.current_scale
+        pointer_x = base_x + math.cos(angle) * bounce
+        pointer_y = base_y + math.sin(angle) * bounce
         scale = self.current_scale
         
-        points = [
-            (self.center_x, pointer_y),
-            (self.center_x - 20 * scale, pointer_y - 35 * scale),
-            (self.center_x + 20 * scale, pointer_y - 35 * scale)
-        ]
+        # Triangle points toward center (down-left from 1 o'clock)
+        # Tip is closer to center, base is at pointer position
+        tip_dist = 35 * scale
+        half_base = 20 * scale
+        
+        # Vector pointing toward center
+        dx = -math.cos(angle)  # negative because we want inward
+        dy = -math.sin(angle)
+        
+        # Perpendicular vector for base width
+        perp_x = -dy
+        perp_y = dx
+        
+        # Calculate triangle points
+        tip_x = pointer_x + dx * tip_dist
+        tip_y = pointer_y + dy * tip_dist
+        
+        base1_x = pointer_x + perp_x * half_base
+        base1_y = pointer_y + perp_y * half_base
+        base2_x = pointer_x - perp_x * half_base
+        base2_y = pointer_y - perp_y * half_base
+        
+        points = [(tip_x, tip_y), (base1_x, base1_y), (base2_x, base2_y)]
+        
         pygame.draw.polygon(screen, (255, 50, 50), points)
         pygame.draw.polygon(screen, (255, 215, 0), points, max(1, int(3 * scale)))
-        pygame.draw.circle(screen, (255, 215, 0), 
-                          (int(self.center_x), int(pointer_y - 15 * scale)), 
-                          int(8 * scale))
+        pygame.draw.circle(screen, (255, 215, 0), (int(pointer_x), int(pointer_y)), int(8 * scale))
     
     def _draw_result(self, screen):
         overlay = pygame.Surface((self.screen_width, self.screen_height), pygame.SRCALPHA)
