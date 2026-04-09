@@ -9,12 +9,8 @@ import os
 from datetime import datetime
 from enum import Enum
 
-
-class Rarity(Enum):
-    """NEW: Gacha rarity levels"""
-    COMMON = "common"
-    RARE = "rare"
-    ULTRA_RARE = "ultra_rare"
+# Import Rarity from falling_objects to avoid duplication
+from src.game.falling_objects import Rarity
 from src.game.wish_system import WishSystem
 
 
@@ -67,35 +63,11 @@ class GameState:
         self._event_queue = []
         
         # Initialize wish system with category
-        from src.game.wish_system import WishSystem
         self.wish_system = WishSystem(category=self.category)
         
         # High scores
         self.high_scores = self._load_high_scores()
         self.high_score = self.high_scores[0]['score'] if self.high_scores else 0
-        
-        # === NEW: Event system for Jen ===
-        self._events = {
-            'ultra_rare_caught': False,
-            'rare_caught': False,
-            'common_caught': False,
-            'missed': False,
-            'screen_flash': False
-        }
-        
-        # === NEW: Rarity weights for Gio ===
-        self.rarity_weights = {
-            Rarity.COMMON: 0.70,
-            Rarity.RARE: 0.25,
-            Rarity.ULTRA_RARE: 0.05
-        }
-        
-        # Score values by rarity
-        self.rarity_scores = {
-            Rarity.COMMON: 10,
-            Rarity.RARE: 50,
-            Rarity.ULTRA_RARE: 100
-        }
     
     def _load_high_scores(self):
         try:
@@ -150,11 +122,12 @@ class GameState:
                 points = int(base_points * self.multiplier)
                 self.score += points
                 
-                # Track rarity stats
-                self.catches_by_rarity[item.rarity] += 1
+                # FIXED: Use .value to get string key for dictionary
+                rarity_key = item.rarity.value  # 'rare' instead of Rarity.RARE
+                self.catches_by_rarity[rarity_key] += 1
                 
                 # Track best single catch
-                catch_desc = f"{item.rarity.replace('_', ' ').title()} {item.category.title()}"
+                catch_desc = f"{rarity_key.replace('_', ' ').title()} {self.category.title()}"
                 if (not self.session_best_catch or 
                     base_points > self.session_best_catch['base_points']):
                     self.session_best_catch = {
@@ -163,8 +136,8 @@ class GameState:
                         'total_points': points
                     }
                 
-                # Fire rarity events for Jen
-                if item.rarity == 'rare':
+                # Fire rarity events for Jen - compare Enum to Enum
+                if item.rarity == Rarity.RARE:
                     self._trigger_event('rare_caught', {
                         'points': points,
                         'description': catch_desc
@@ -172,7 +145,7 @@ class GameState:
                     if self.assets and 'plus_score' in self.assets.sounds:
                         self.assets.sounds['plus_score'].play()
                 
-                elif item.rarity == 'ultra_rare':
+                elif item.rarity == Rarity.ULTRA_RARE:
                     self._trigger_event('ultra_rare_caught', {
                         'points': points,
                         'description': catch_desc
@@ -204,6 +177,12 @@ class GameState:
             self.game_over = True
             self._add_high_score()
         return self.game_over
+    
+    def trigger_game_over(self):
+        """Called by timer running out"""
+        if not self.game_over:
+            self.game_over = True
+            self._add_high_score()
     
     def _add_high_score(self):
         if self.score > 0:

@@ -1,8 +1,8 @@
 import pygame
-import cv2  # Added for camera window updates
+import cv2
 import os
 import random
-from src.game.falling_objects import FallingItem
+from src.game.falling_objects import FallingItem, Rarity  # ADD Rarity import
 from src.game.asset_manager import AssetManager 
 
 def fade(screen, width, height, fade_in=True, speed=5):
@@ -45,7 +45,8 @@ class UIFallingManager:
         x = random.randint(60, self.screen_width - 60)
         item_type = 'good' if random.random() < 0.7 else 'bad'
         speed = random.uniform(2, 4)
-        self.items.append(FallingItem(x, item_type, speed, self.assets))
+        # FIXED: Added Rarity.COMMON as the third argument
+        self.items.append(FallingItem(x, item_type, Rarity.COMMON, speed, self.assets))
 
     def update(self, dt):
         self.spawn_timer += dt

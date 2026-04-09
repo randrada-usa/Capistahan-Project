@@ -13,8 +13,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from src.ui.start_screen import show_start_screen
 from src.ui.end_screen import show_end_screen
-from src.ui.wheel_screen import show_wheel_screen  # NEW
-from src.ui.end_screen import show_end_screen 
+from src.ui.wheel_screen import show_wheel_screen
 from src.game.theme_manager import ThemeManager
 from src.game.asset_manager import AssetManager
 from src.game.player import Player
@@ -65,8 +64,12 @@ class Game:
         self.hand_lost_timer = 0
         self.running = True
         
-        # NEW: Track selected category
+        # Track selected category
         self.current_category = None
+        
+        # Camera profile selection
+        self.camera_profile = os.environ.get('CAMERA_PROFILE', 'high_angle')
+        print(f"[Game] Camera profile: {self.camera_profile}")
 
         if CV_AVAILABLE:
             cv2.namedWindow("GAMEFRICKS PROTOTYPE01 - Camera Feed", cv2.WINDOW_NORMAL)
@@ -75,34 +78,20 @@ class Game:
 
     def reset_game(self, category=None):
         """
-        MODIFIED: Accept category for theme loading.
+        Reset game state for new game round, optionally switching theme.
         """
         # Game timing
         self.game_duration = 60.0
         self.time_remaining = self.game_duration
         
-        # Camera profile selection
-        self.camera_profile = os.environ.get('CAMERA_PROFILE', 'high_angle')
-        print(f"[Game] Camera profile: {self.camera_profile}")
-
-        if CV_AVAILABLE:
-            cv2.namedWindow("GAMEFRICKS PROTOTYPE01 - Camera Feed", cv2.WINDOW_NORMAL)
-
-        # Initialize CV BEFORE showing start screen
-        self.init_cv()
-
-    def reset_game(self, theme=None):
-        """
-        Reset game state for new game round, optionally switching theme.
-        """
-        
-        # THEME SWITCHING
-        if theme and theme != self.assets.get_theme_manager().get_theme():
-            print(f"[Game] Switching theme to: {theme}")
-            self.assets.change_theme(theme)
+        # THEME SWITCHING based on wheel category
+        if category and category != self.assets.get_theme_manager().get_theme():
+            print(f"[Game] Switching theme to: {category}")
+            self.assets.change_theme(category)
+            self.current_category = category
         
         # Create ThemeManager for Gio's systems
-        theme_manager = ThemeManager(theme) if theme else self.assets.get_theme_manager()
+        theme_manager = self.assets.get_theme_manager()
         
         # Reset game components
         self.player = Player(self.screen_w, self.screen_h, self.assets)
@@ -119,20 +108,12 @@ class Game:
         )
         
         self.hand_lost_timer = 0
-        self.time_remaining = self.game_duration
         
-        # NEW: Load category-specific assets if provided
-        if category:
-            self.current_category = category
-            print(f"[Game] Loading theme: {category}")
-            # TODO: Rey - Load assets from /assets/{category}/ here
-            # self.assets.load_category(category)
+        # Reset gesture controller state (don't reinitialize camera)
+        if self.gesture_controller:
+            self.gesture_controller.reset()
         
         # Music
-        if 'ingame' in self.assets.music_paths:
-            pygame.mixer.music.load(self.assets.music_paths['ingame'])
-            pygame.mixer.music.play(-1, fade_ms=2000)
-        # Load music
         theme_music = self.assets.music_paths.get('ingame')
         if theme_music and os.path.exists(theme_music):
             try:
@@ -140,9 +121,6 @@ class Game:
                 pygame.mixer.music.play(-1, fade_ms=2000)
             except Exception as e:
                 print(f"[WARNING] Could not play ingame music: {e}")
-        
-        if self.gesture_controller:
-            self.gesture_controller.reset()
 
     def init_cv(self):
         """Initialize Gesture Controller with selected profile."""
@@ -156,7 +134,7 @@ class Game:
             except Exception as e:
                 print(f"[Game] CV failed: {e}")
                 import traceback
-                traceback.print_exc()  # Print full error details
+                traceback.print_exc()
                 self.use_cv = False
 
     def handle_events(self):
@@ -213,14 +191,14 @@ class Game:
         self.game_state.handle_missed_good(missed_good)
         self.game_state.check_game_over()
         
-        # === NEW: Process events for Jen's expressions ===
+        # Process events for Jen's expressions
         self._process_jen_events()
         
         return player_x, self.player.y
     
     def _process_jen_events(self):
         """
-        NEW: Bridge Gio's game_state events to Jen's player expressions.
+        Bridge Gio's game_state events to Jen's player expressions.
         Call this every frame.
         """
         events = self.game_state.get_events_for_jen()
@@ -271,7 +249,6 @@ class Game:
                 cv2.waitKey(1)
 
     def _draw_hud(self):
-        """Draw HUD"""
         """Draws Score, Timer, High Score, and Heart."""
         score_text = self.font_large.render(f"Score: {self.game_state.score}", True, (255, 255, 255))
         self.screen.blit(score_text, (self.screen_w - 550, 80))
@@ -309,7 +286,7 @@ class Game:
                     self.running = False
                     break
 
-                # 2. WHEEL SCREEN (NEW) - Category selection
+                # WHEEL SCREEN - Category selection
                 selected_category = show_wheel_screen(
                     self.screen, 
                     self.screen_w, 
@@ -323,7 +300,7 @@ class Game:
                 
                 print(f"[Game] Selected category: {selected_category}")
 
-                # 3. Gameplay with selected category
+                # Gameplay with selected category
                 self.reset_game(category=selected_category)
                 game_active = True
 
@@ -345,9 +322,7 @@ class Game:
                     
                     retry = show_end_screen(
                         self.screen,
-                        self.game_state.score,
-                        self.game_state.high_score,
-                        self.game_state.is_new_high_score(),
+                        self.game_state,
                         snapshot,
                         self.screen_w,
                         self.screen_h,

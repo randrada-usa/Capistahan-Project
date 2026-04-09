@@ -1,6 +1,20 @@
 {
   "high_scores": [
     {
+      "score": 172,
+      "date": "2026-04-09 21:09",
+      "is_new": true,
+      "category": "people",
+      "category_display": "Capiz Community",
+      "best_catch": "Ultra Rare People",
+      "catches": {
+        "common": 4,
+        "rare": 1,
+        "ultra_rare": 1
+      },
+      "multiplier": 1.5
+    },
+    {
       "score": 19,
       "date": "2026-04-03 17:58",
       "is_new": true
@@ -16,10 +30,6 @@
     {
       "score": 16,
       "date": "2026-04-03 15:44"
-    },
-    {
-      "score": 16,
-      "date": "2026-04-03 16:07"
     }
   ]
 }
