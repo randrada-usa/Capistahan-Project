@@ -1,0 +1,85 @@
+Overview
+
+# GameFrick Project - Gesture Cafe Game
+
+OpenCV + MediaPipe hand-tracking game for cafe pop-ups. Student project by GameFrick team.
+
+## 🎯 Quick Overview
+
+We're building a gesture-controlled game where players use hand/body movements to interact with the screen — no touching required! Perfect for cafes and pop-up events.
+
+## 👥 Team
+
+| Name | Role | What I Do |
+|------|------|-----------|
+| Rey | Team Lead / CV Integration | Hand tracking, gesture recognition, architecture |
+| Gio | Gesture Detection / Game Logic | What counts as a "swipe", scoring system |
+| Jen | UI / Game States | Screens, buttons, menus, visual feedback |
+| Ele | Sound Engineer | Sound effects, background music, audio polish |
+| Tris | Marketing / Cafe Outreach | Selling to shops, demos, feedback collection |
+
+## 🛠️ Tech Stack
+
+- **Python 3.11** (programming language)
+- **OpenCV** (computer vision, camera access)
+- **MediaPipe** (hand tracking, gesture detection)
+- **Pygame** (game graphics, sounds, input)
+- **NumPy** (math and arrays)
+
+## 📁 Project Structure
+GameFrick-Project/
+├── venv/                 # Virtual environment (Python packages)
+├── src/                  # Source code
+│   ├── cv/              # Computer vision stuff
+│   ├── game/            # Game logic
+│   └── ui/              # User interface
+├── assets/              # Art, sounds, images
+│   ├── backgrounds/
+│   ├── sprites/
+│   ├── ui/
+│   ├── audio/
+│   └── effects/
+├── tools/               # Helper scripts
+├── docs/                # Notes, meeting minutes
+├── .gitignore
+├── requirements.txt
+└── README.md
+
+requirements:
+opencv-python==4.11.0.86
+mediapipe==0.10.33
+pygame==2.6.1
+numpy==1.26.4
+
+Activity                                | Files Touched                                 |
+--------------------------------------- | --------------------------------------------- |
+Rey gets hand tracking working          | `src/cv/hand_tracker.py`                      |
+Gio maps hand to screen coords          | `src/game/gesture_mapper.py`                  |
+Jen sets up game loop + falling objects | `src/game/game_loop.py`, `falling_objects.py` |
+Integration test - all together         | `main.py`                                     |
+Art with AI / placeholder sprites       | `assets/`                                     |
+Polish: score, timer, game over         | `src/ui/screens.py`                           |
+
+
+our game concept:
+Simple fall/catch game where the hand controls a chibi model on an x axis,
+good and bad items fall from the top of the screen where the user has to catch them.
+It has a score based acceleration for the item drop rate.
+-good item (+1 score)
+-bad item (-1 heart)
+
+
+I am jen part of the dev team, specifically in charge of (your use case)
+ex. game loop or game logic
+
+Simple logic:
+
+object falls
+player catches → +1
+miss → nothing
+
+This is our file tree study this for my future prompts.
+
+my other team members will handle their part, help me with mine, 
+make me a roadmap that you can guide me step by step. Ask questions for clarification, dont add features not mentioned.
+
