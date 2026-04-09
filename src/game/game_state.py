@@ -15,17 +15,62 @@ class Rarity(Enum):
     COMMON = "common"
     RARE = "rare"
     ULTRA_RARE = "ultra_rare"
+from src.game.wish_system import WishSystem
 
 
 class GameState:
     HIGHSCORE_FILE = "highscore.json"
     MAX_HIGH_SCORES = 5
     
-    def __init__(self, assets=None):
+    # Wish system threshold
+    WISH_THRESHOLD = 200
+    
+    # Category multipliers (tune these based on difficulty)
+    CATEGORY_MULTIPLIERS = {
+        'food': 1.0,
+        'culture': 1.2,
+        'people': 1.5
+    }
+    
+    def __init__(self, assets=None, theme_manager=None):
         self.assets = assets
+        self.theme_manager = theme_manager
+        
+        # Get category from ThemeManager
+        if theme_manager:
+            self.category = theme_manager.get_theme()
+        else:
+            self.category = 'food'
+        
+        self.multiplier = self.CATEGORY_MULTIPLIERS.get(self.category, 1.0)
+        
+        # Core stats
         self.score = 0
         self.lives = 6
         self.game_over = False
+        
+        # Session tracking
+        self.session_best_catch = None
+        self.catches_by_rarity = {
+            'common': 0,
+            'rare': 0,
+            'ultra_rare': 0
+        }
+        
+        # Events for Jen (cleared each frame)
+        self.catch_events = {
+            'rare_caught': False,
+            'ultra_rare_caught': False,
+            'combo_active': False,
+            'milestone_reached': False
+        }
+        self._event_queue = []
+        
+        # Initialize wish system with category
+        from src.game.wish_system import WishSystem
+        self.wish_system = WishSystem(category=self.category)
+        
+        # High scores
         self.high_scores = self._load_high_scores()
         self.high_score = self.high_scores[0]['score'] if self.high_scores else 0
         
@@ -69,83 +114,95 @@ class GameState:
         except:
             pass
     
-    # === NEW: Event system for Jen ===
-    
-    def get_events_for_jen(self):
-        """
-        Jen calls this every frame to check for expression triggers.
-        Returns dict of event states.
-        """
-        return self._events.copy()
+    def _trigger_event(self, event_name, data=None):
+        """Queue event for Jen's UI to consume."""
+        self.catch_events[event_name] = True
+        self._event_queue.append({
+            'type': event_name,
+            'data': data,
+            'timestamp': datetime.now().isoformat()
+        })
     
     def consume_events(self):
-        """Clear events after Jen processes them"""
-        for key in self._events:
-            self._events[key] = False
-    
-    def trigger_screen_flash(self):
-        """For ultra rare catches"""
-        self._events['screen_flash'] = True
-    
-    # === MODIFIED: Handle catches with rarity ===
-    
-    def handle_caught_with_rarity(self, rarity: Rarity):
-        """
-        NEW: Handle catch with rarity system.
-        Sets events for Jen's expressions.
-        """
-        points = self.rarity_scores.get(rarity, 10)
-        self.score += points
+        """Call this each frame in game_loop to get events for Jen."""
+        events = self._event_queue.copy()
+        self._event_queue.clear()
         
-        # Set events for Jen
-        if rarity == Rarity.ULTRA_RARE:
-            self._events['ultra_rare_caught'] = True
-            self.trigger_screen_flash()
-            if self.assets and 'ultra_rare' in self.assets.sounds:
-                self.assets.sounds['ultra_rare'].play()
-        elif rarity == Rarity.RARE:
-            self._events['rare_caught'] = True
-            if self.assets and 'rare' in self.assets.sounds:
-                self.assets.sounds['rare'].play()
-        else:
-            self._events['common_caught'] = True
-            if self.assets and 'good' in self.assets.sounds:
-                self.assets.sounds['good'].play()
+        # Reset one-shot flags
+        self.catch_events['rare_caught'] = False
+        self.catch_events['ultra_rare_caught'] = False
+        self.catch_events['milestone_reached'] = False
+        
+        return events
+    
+    def get_events_for_jen(self):
+        """Read-only peek at current events (for UI rendering)."""
+        return self.catch_events.copy()
     
     def handle_caught(self, items):
-        """
-        ORIGINAL: Keep for backward compatibility.
-        Now routes to rarity system.
-        """
+        """Process caught items with rarity-based scoring."""
         for item in items:
-            if hasattr(item, 'rarity') and item.rarity:
-                # New system with rarity
-                self.handle_caught_with_rarity(item.rarity)
-            else:
-                # Legacy: treat as common
-                if item.type == 'good':
-                    self.score += 1
-                    self._events['common_caught'] = True
+            if item.type == 'good':
+                # Base points from item rarity
+                base_points = item.get_score_value()
+                
+                # Apply category multiplier
+                points = int(base_points * self.multiplier)
+                self.score += points
+                
+                # Track rarity stats
+                self.catches_by_rarity[item.rarity] += 1
+                
+                # Track best single catch
+                catch_desc = f"{item.rarity.replace('_', ' ').title()} {item.category.title()}"
+                if (not self.session_best_catch or 
+                    base_points > self.session_best_catch['base_points']):
+                    self.session_best_catch = {
+                        'description': catch_desc,
+                        'base_points': base_points,
+                        'total_points': points
+                    }
+                
+                # Fire rarity events for Jen
+                if item.rarity == 'rare':
+                    self._trigger_event('rare_caught', {
+                        'points': points,
+                        'description': catch_desc
+                    })
+                    if self.assets and 'plus_score' in self.assets.sounds:
+                        self.assets.sounds['plus_score'].play()
+                
+                elif item.rarity == 'ultra_rare':
+                    self._trigger_event('ultra_rare_caught', {
+                        'points': points,
+                        'description': catch_desc
+                    })
                     if self.assets and 'good' in self.assets.sounds:
                         self.assets.sounds['good'].play()
                 else:
-                    self.lives -= 1
-                    if self.assets and 'bad' in self.assets.sounds:
-                        self.assets.sounds['bad'].play()
+                    if self.assets and 'good' in self.assets.sounds:
+                        self.assets.sounds['good'].play()
+                
+                # Milestone events every 50 points
+                if self.score > 0 and self.score % 50 == 0:
+                    self._trigger_event('milestone_reached', {'score': self.score})
+                
+            else:
+                self.lives -= 1
+                if self.assets and 'bad' in self.assets.sounds:
+                    self.assets.sounds['bad'].play()
     
     def handle_missed_good(self, count):
-        """Original: Reduce lives and set miss event"""
+        """Reduce lives when good items fall off screen."""
         if count > 0:
             self.lives -= count
-            self._events['missed'] = True
             if self.assets and 'minus_life' in self.assets.sounds:
                 self.assets.sounds['minus_life'].play()
     
     def check_game_over(self):
-        if self.lives <= 0:
-            if not self.game_over:
-                self.game_over = True
-                self._add_high_score()
+        if self.lives <= 0 and not self.game_over:
+            self.game_over = True
+            self._add_high_score()
         return self.game_over
     
     def _add_high_score(self):
@@ -153,7 +210,12 @@ class GameState:
             entry = {
                 'score': self.score,
                 'date': datetime.now().strftime("%Y-%m-%d %H:%M"),
-                'is_new': True
+                'is_new': True,
+                'category': self.category,
+                'category_display': self.theme_manager.get_theme_display_name() if self.theme_manager else 'Capiz Cuisine',
+                'best_catch': self.session_best_catch['description'] if self.session_best_catch else None,
+                'catches': self.catches_by_rarity.copy(),
+                'multiplier': self.multiplier
             }
             self.high_scores.append(entry)
             self.high_scores.sort(key=lambda x: x['score'], reverse=True)
@@ -161,29 +223,54 @@ class GameState:
             self.high_score = self.high_scores[0]['score']
             self._save_high_scores()
     
+    def is_wish_eligible(self):
+        """Check if player earned enough points to make a wish."""
+        return self.score >= self.WISH_THRESHOLD
+    
+    def get_wish_status(self):
+        """Returns dict for end screen progress bar."""
+        return {
+            'eligible': self.is_wish_eligible(),
+            'threshold': self.WISH_THRESHOLD,
+            'current': self.score,
+            'progress_percent': min(100.0, (self.score / self.WISH_THRESHOLD) * 100)
+        }
+    
+    def resolve_wish(self):
+        """Called by end screen when player clicks 'Make Wish'."""
+        return self.wish_system.roll_wish(self.score)
+    
     def reset(self):
+        """Reset for new game round."""
         for entry in self.high_scores:
             entry['is_new'] = False
         
         self.score = 0
         self.lives = 6
         self.game_over = False
-        self._events = {k: False for k in self._events}
+        self.session_best_catch = None
+        self.catches_by_rarity = {'common': 0, 'rare': 0, 'ultra_rare': 0}
+        self.catch_events = {k: False for k in self.catch_events}
+        self._event_queue.clear()
+        
+        # Re-initialize wish system for new category
+        if self.theme_manager:
+            self.category = self.theme_manager.get_theme()
+        self.wish_system = WishSystem(category=self.category)
     
     def is_new_high_score(self):
         if self.high_scores and self.game_over:
             return self.high_scores[0].get('is_new', False)
         return False
     
-    # === NEW: Helper for Gio's spawner ===
-    
-    def get_random_rarity(self):
-        """Weighted random for falling objects"""
-        import random
-        roll = random.random()
-        cumulative = 0
-        for rarity, weight in self.rarity_weights.items():
-            cumulative += weight
-            if roll <= cumulative:
-                return rarity
-        return Rarity.COMMON
+    def get_stats_summary(self):
+        """For end screen display."""
+        return {
+            'total_score': self.score,
+            'category': self.category,
+            'category_display': self.theme_manager.get_theme_display_name() if self.theme_manager else 'Capiz Cuisine',
+            'multiplier': self.multiplier,
+            'catches': self.catches_by_rarity.copy(),
+            'best_catch': self.session_best_catch,
+            'wish_status': self.get_wish_status()
+        }
