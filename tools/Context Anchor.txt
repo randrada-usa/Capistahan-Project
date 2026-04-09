@@ -1,0 +1,58 @@
+HarryPotterPygameMainFolder/
+├── main.py                 # Core loop, handles screen switching (Rey)
+├── requirements.txt        # Python dependencies
+├── venv/                   # Virtual environment
+└── src/
+    ├── cv/
+    │   └── gesture_controller.py  # Hand tracking & camera logic (Rey)
+    ├── game/
+    │   ├── asset_manager.py       # Theme-based loader (Food/Culture/People)
+    │   ├── falling_objects.py     # Gacha probability & rarity logic (Gio)
+    │   ├── player.py              # Mascot movement & expression handler (Gio/Jen)
+    │   └── game_state.py          # Scoring & Wish threshold logic (Gio)
+    └── ui/
+        ├── start_screen.py        # Main entry menu
+        ├── wheel_screen.py        # NEW: The Gacha Category Wheel (Jen)
+        └── end_screen.py          # Score display & "Wish" system (Jen)
+
+1. The Master Context Prompt (Start here)
+"I am working with 6-byte Studios on a Gacha-themed gesture game for 
+the Capiztahan event on April 17. The game uses OpenCV/Mediapipe for 
+hand tracking. We have transitioned from a 'Cafe' theme to a 3-category 
+Gacha system (Food, Culture, People). The game flow is: Start Screen 
+$\rightarrow$ Category Wheel $\rightarrow$ Gameplay (based on category) 
+$\rightarrow$ End Screen $\rightarrow$ Wish System (Score-based). 
+We are using a modular Python/Pygame architecture."
+
+2. Tailored Prompt: REY (Architecture & CV)
+Focus: Integration and Camera.
+
+"Act as a Senior Python Dev helping Rey. We need to modify main.py and gesture_controller.py.
+Setup a 'Theme' manager so the game loads assets from /assets/food/ or /assets/culture/ based on the Wheel result.
+Adjust the CV sensitivity for a 'High-Angle' camera (mounted on a table above the monitor).
+Ensure the camera feed doesn't drop when switching from the wheel_screen to the game_loop."
+
+3. Tailored Prompt: GIO (Mechanics & Math)
+Focus: Gacha Luck and Scoring.
+
+"Act as a Game Balance Designer helping Gio. We need to update falling_objects.py.
+
+Implement a weighted random spawner for 3 rarities: Common (70%), Rare (25%), and Ultra Rare (5%).
+
+Create a scoring system where Rarity affects points.
+
+Write the 'Wish' logic for the end screen: If score >= threshold, 
+calculate a 20% chance to win a 'Gift Box' prize. Provide a verification 
+code for winners."
+
+4. Tailored Prompt: JEN (UI & Transitions)
+Focus: Visuals and User Flow.
+
+"Act as a UI/UX Engineer helping Jen. We need to create wheel_screen.py and update end_screen.py.
+
+Create a spinning wheel animation using Pygame that lands on one of three strings: 'food', 'culture', or 'people'.
+
+Update the mascot in player.py to change expressions based on a 
+'Catch Event' (e.g., if Gio's code catches a Rare, show Billy's 'Excited' sprite for 1 second).
+
+Design the 'Wish' button and the Golden Ticket/Better Luck pop-ups for the End Screen."
