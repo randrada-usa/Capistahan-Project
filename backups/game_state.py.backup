@@ -118,7 +118,7 @@ class GameState:
         Now routes to rarity system.
         """
         for item in items:
-            if hasattr(item, 'rarity') and item.rarity:
+            if hasattr(item, 'rarity'):
                 # New system with rarity
                 self.handle_caught_with_rarity(item.rarity)
             else:
