@@ -155,12 +155,12 @@ class Game:
                         cv2.namedWindow("GAMEFRICKS PROTOTYPE01 - Camera Feed", cv2.WINDOW_NORMAL)
         return True
 
-    def update(self):
+    def update(self, dt):
         """Update game logic, physics, CV input, and timer."""
         if self.game_state.game_over:
             return None, None
         
-        dt = 1/60
+        # FIXED: Use actual dt instead of fixed 1/60
         self.time_remaining -= dt
         if self.time_remaining <= 0:
             self.time_remaining = 0
@@ -178,10 +178,10 @@ class Game:
 
         # Update player
         self.player.set_target_x(player_x)
-        self.player.update(1/60)
+        self.player.update(dt)  # FIXED: Pass actual dt instead of 1/60
         
         # Update objects
-        self.object_manager.update(1/60, self.game_state.score)
+        self.object_manager.update(dt, self.game_state.score)  # FIXED: Pass actual dt
         
         # Collisions
         caught, missed_good = self.object_manager.check_collisions(self.player.get_hitbox())
@@ -305,12 +305,14 @@ class Game:
                 game_active = True
 
                 while game_active and self.running:
+                    # FIXED: Get actual frame time for proper dt
+                    dt = self.clock.tick(self.fps) / 1000.0
+                    
                     if not self.handle_events():
                         break
                     
-                    p_x, p_y = self.update()
+                    p_x, p_y = self.update(dt)
                     self.render(p_x, p_y)
-                    self.clock.tick(self.fps)
                     
                     if self.game_state.game_over:
                         game_active = False

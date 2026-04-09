@@ -21,7 +21,7 @@ def _resolve_model_path(model_path):
     Resolve the model path for both dev and PyInstaller .exe environments.
     """
     if getattr(sys, 'frozen', False):
-        base = sys._MEIPASS
+        base = sys._MEIPASS  # PyInstaller temp folder
     else:
         base = os.path.abspath('.')
     
@@ -135,11 +135,15 @@ class HandTracker:
         primary_indices, backup_indices = self.profile.get_landmark_indices()
         
         def get_average(indices):
-            x_sum = sum(hand_landmarks[i].x for i in indices if i < len(hand_landmarks))
-            y_sum = sum(hand_landmarks[i].y for i in indices if i < len(hand_landmarks))
-            count = min(len(indices), len(hand_landmarks))
-            if count == 0:
+            # FIXED: Filter valid indices first, then calculate average
+            valid_indices = [i for i in indices if i < len(hand_landmarks)]
+            if not valid_indices:
                 return None
+            
+            x_sum = sum(hand_landmarks[i].x for i in valid_indices)
+            y_sum = sum(hand_landmarks[i].y for i in valid_indices)
+            count = len(valid_indices)  # FIXED: Use actual count of valid indices
+            
             return (x_sum / count, y_sum / count)
         
         pos = get_average(primary_indices)

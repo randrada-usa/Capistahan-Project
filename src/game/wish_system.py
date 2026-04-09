@@ -9,6 +9,13 @@ import json
 import os
 from datetime import datetime
 
+# Platform-specific file locking (Unix only, Windows skips)
+try:
+    import fcntl
+    HAS_FCNTL = True
+except ImportError:
+    HAS_FCNTL = False
+
 
 class WishSystem:
     """
@@ -150,8 +157,17 @@ class WishSystem:
         }
         
         try:
+            # Simple append mode (safe for single-player game)
+            # File locking only applied on Unix systems
             with open(self.LOG_FILE, 'a') as f:
+                if HAS_FCNTL:
+                    fcntl.flock(f, fcntl.LOCK_EX)
+                
                 f.write(json.dumps(log_entry) + '\n')
+                
+                if HAS_FCNTL:
+                    fcntl.fcntl.flock(f, fcntl.LOCK_UN)
+                    
         except Exception as e:
             print(f"[WishSystem] Log error: {e}")
     
@@ -176,14 +192,17 @@ class WishSystem:
         try:
             with open(self.LOG_FILE, 'r') as f:
                 for line in f:
-                    entry = json.loads(line.strip())
-                    total += 1
-                    if entry.get('won'):
-                        wins += 1
-                        if entry['timestamp'].startswith(today):
-                            today_wins += 1
-        except:
-            pass
+                    try:
+                        entry = json.loads(line.strip())
+                        total += 1
+                        if entry.get('won'):
+                            wins += 1
+                            if entry['timestamp'].startswith(today):
+                                today_wins += 1
+                    except json.JSONDecodeError:
+                        continue  # Skip corrupted lines
+        except Exception as e:
+            print(f"[WishSystem] Analytics error: {e}")
         
         return {
             'total_attempts': total,

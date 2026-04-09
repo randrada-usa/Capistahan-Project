@@ -52,8 +52,8 @@ class AssetManager:
         if not pygame.mixer.get_init():
             try:
                 pygame.mixer.init()
-            except:
-                pass
+            except Exception as e:
+                log(f"[AssetManager] Mixer init failed: {e}")
         
         # Track which assets failed to load themed version (for debugging)
         self.fallbacks_used = []
@@ -200,11 +200,8 @@ class AssetManager:
             return pygame.mixer.Sound(full_path)
         except Exception as e:
             log(f"[AssetManager] Error loading sound {full_path}: {e}")
-            # Return silent sound
-            try:
-                return pygame.mixer.Sound(buffer=bytes(0))
-            except:
-                return None
+            # FIXED: Return None instead of invalid buffer
+            return None
     
     def _create_placeholder(self, target_size):
         """Create magenta error placeholder surface."""

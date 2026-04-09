@@ -62,6 +62,9 @@ class GameState:
         }
         self._event_queue = []
         
+        # FIXED: Track last milestone to detect crossings properly
+        self._last_milestone = 0
+        
         # Initialize wish system with category
         self.wish_system = WishSystem(category=self.category)
         
@@ -75,16 +78,16 @@ class GameState:
                 with open(self.HIGHSCORE_FILE, 'r') as f:
                     data = json.load(f)
                     return data.get('high_scores', [])
-        except:
-            pass
+        except Exception as e:
+            print(f"[GameState] Error loading high scores: {e}")
         return []
     
     def _save_high_scores(self):
         try:
             with open(self.HIGHSCORE_FILE, 'w') as f:
                 json.dump({'high_scores': self.high_scores}, f, indent=2)
-        except:
-            pass
+        except Exception as e:
+            print(f"[GameState] Error saving high scores: {e}")
     
     def _trigger_event(self, event_name, data=None):
         """Queue event for Jen's UI to consume."""
@@ -120,6 +123,9 @@ class GameState:
                 
                 # Apply category multiplier
                 points = int(base_points * self.multiplier)
+                
+                # FIXED: Check milestone BEFORE adding score to detect threshold crossing
+                old_score = self.score
                 self.score += points
                 
                 # FIXED: Use .value to get string key for dictionary
@@ -156,9 +162,12 @@ class GameState:
                     if self.assets and 'good' in self.assets.sounds:
                         self.assets.sounds['good'].play()
                 
-                # Milestone events every 50 points
-                if self.score > 0 and self.score % 50 == 0:
+                # FIXED: Milestone detection - check if we crossed any 50-point threshold
+                old_milestone = old_score // 50
+                new_milestone = self.score // 50
+                if new_milestone > old_milestone and self.score > 0:
                     self._trigger_event('milestone_reached', {'score': self.score})
+                    self._last_milestone = new_milestone * 50
                 
             else:
                 self.lives -= 1
@@ -231,6 +240,7 @@ class GameState:
         self.catches_by_rarity = {'common': 0, 'rare': 0, 'ultra_rare': 0}
         self.catch_events = {k: False for k in self.catch_events}
         self._event_queue.clear()
+        self._last_milestone = 0  # FIXED: Reset milestone tracker
         
         # Re-initialize wish system for new category
         if self.theme_manager:
