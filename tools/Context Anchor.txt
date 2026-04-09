@@ -1,4 +1,3 @@
-HarryPotterPygameMainFolder/
 ├── main.py                 # Core loop, handles screen switching (Rey)
 ├── requirements.txt        # Python dependencies
 ├── venv/                   # Virtual environment
