@@ -11,6 +11,7 @@ import sys
 import os
 import time
 import warnings
+from src.cv.camera_profile import CameraProfile
 
 warnings.filterwarnings('ignore', category=UserWarning, module='mediapipe')
 
@@ -50,15 +51,19 @@ class HandTracker:
     - Returns None if no hand detected (with prediction grace period)
     """
     
-    def __init__(self, camera_index=0, model_path="hand_landmarker.task"):
+    def __init__(self, camera_index=0, model_path="hand_landmarker.task", 
+                 camera_profile='front'):  # ADD camera_profile parameter
+        
         self.camera_index = camera_index
         self.cap = None
         self.frame_timestamp = 0
         
+        # NEW: Camera profile system
+        self.profile = CameraProfile(camera_profile)
+        print(f"[HandTracker] Using camera profile: {self.profile.get('name')}")
+        
         # Smoothing buffer
         self.position_history = []
-        
-        # Grace period and prediction
         self.missed_frames = 0
         self.max_missed = 3
         self.last_position = None
@@ -66,11 +71,13 @@ class HandTracker:
         self.max_prediction = 5
         self._last_landmarks = None
 
-        # Resolve model path for both dev and .exe
+        # Resolve model path
         resolved_model_path = _resolve_model_path(model_path)
         print(f"[HandTracker] Loading model from: {resolved_model_path}")
         
-        # MediaPipe - LOWERED THRESHOLDS for cafe lighting
+        # MODIFIED: Use profile settings for MediaPipe
+        mp_options = self.profile.get_mediapipe_options()
+        
         from mediapipe.tasks.python.vision import HandLandmarker, HandLandmarkerOptions, RunningMode
         from mediapipe.tasks.python.core.base_options import BaseOptions
         
@@ -78,19 +85,20 @@ class HandTracker:
             base_options=BaseOptions(model_asset_path=resolved_model_path),
             running_mode=RunningMode.VIDEO,
             num_hands=1,
-            min_hand_detection_confidence=0.3,
-            min_hand_presence_confidence=0.3,
-            min_tracking_confidence=0.3
+            min_hand_detection_confidence=mp_options['min_hand_detection_confidence'],
+            min_hand_presence_confidence=mp_options['min_hand_presence_confidence'],
+            min_tracking_confidence=mp_options['min_tracking_confidence']
         )
         
         self.landmarker = HandLandmarker.create_from_options(options)
         
-        print("[HandTracker] MediaPipe HandLandmarker loaded (CAFE MODE)")
-        print("[HandTracker] Settings: detection=0.3, palm center, velocity prediction, auto-exposure")
+        print(f"[HandTracker] Profile '{camera_profile}' loaded")
+        print(f"[HandTracker] Detection: {mp_options['min_detection_confidence']}, "
+              f"Tracking: {mp_options['min_tracking_confidence']}")
     
     def start_camera(self):
-        """Initialize camera capture - tries multiple indices for reliability."""
-        # Try indices 0, 1, 2 in case default camera index fails in .exe
+        """Initialize camera capture with profile-specific settings."""
+        # Try indices 0, 1, 2
         for index in [self.camera_index, 0, 1, 2]:
             self.cap = cv2.VideoCapture(index)
             if self.cap.isOpened():
@@ -101,20 +109,14 @@ class HandTracker:
         if not self.cap.isOpened():
             raise RuntimeError("[HandTracker] No camera found on indices 0, 1, 2")
         
-        # Cafe lighting: Auto-exposure with gain boost
-        self.cap.set(cv2.CAP_PROP_AUTO_EXPOSURE, 0.75)
-        self.cap.set(cv2.CAP_PROP_FPS, 60)
-        self.cap.set(cv2.CAP_PROP_GAIN, 200)
+        # NEW: Apply profile-specific camera settings
+        self.profile.apply_camera_settings(self.cap)
         
-        # Fallback if auto not supported
-        if self.cap.get(cv2.CAP_PROP_AUTO_EXPOSURE) < 0:
-            print("[HandTracker] Auto-exposure not supported, switching to manual bright mode")
-            self.cap.set(cv2.CAP_PROP_AUTO_EXPOSURE, 0.25)
-            self.cap.set(cv2.CAP_PROP_EXPOSURE, -4)
-            self.cap.set(cv2.CAP_PROP_BRIGHTNESS, 150)
+        # Set FPS
+        self.cap.set(cv2.CAP_PROP_FPS, 60)
         
         actual_fps = self.cap.get(cv2.CAP_PROP_FPS)
-        print(f"[HandTracker] Camera {self.camera_index} started ({actual_fps:.0f}fps, cafe lighting mode)")
+        print(f"[HandTracker] Camera {self.camera_index} ready at {actual_fps:.0f}fps")
         return self
     
     def detect_hand(self, frame):
@@ -132,14 +134,31 @@ class HandTracker:
         return None
     
     def get_palm_center(self, hand_landmarks):
-        """Calculate palm center from wrist + finger bases."""
+        """
+        MODIFIED: Use profile-specific landmark selection.
+        Returns position based on primary/backup landmark configuration.
+        """
         if not hand_landmarks:
             return None
         
-        indices = [0, 5, 9, 13, 17]
-        x_sum = sum(hand_landmarks[i].x for i in indices)
-        y_sum = sum(hand_landmarks[i].y for i in indices)
-        return (x_sum / 5, y_sum / 5)
+        # Get profile-specific landmark indices
+        primary_indices, backup_indices = self.profile.get_landmark_indices()
+        
+        def get_average(indices):
+            x_sum = sum(hand_landmarks[i].x for i in indices if i < len(hand_landmarks))
+            y_sum = sum(hand_landmarks[i].y for i in indices if i < len(hand_landmarks))
+            count = min(len(indices), len(hand_landmarks))
+            if count == 0:
+                return None
+            return (x_sum / count, y_sum / count)
+        
+        # Try primary first
+        pos = get_average(primary_indices)
+        if pos is None:
+            # Fallback to backup
+            pos = get_average(backup_indices)
+        
+        return pos
     
     def smooth_position(self, new_pos):
         """Adaptive smoothing - less lag during fast movement."""
