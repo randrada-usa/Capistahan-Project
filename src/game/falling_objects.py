@@ -3,54 +3,108 @@ import random
 
 
 class FallingItem:
-    """Single falling item (good or bad)."""
+    """Single falling item with rarity system and theme integration."""
     
-    def __init__(self, x, item_type, speed, asset_manager=None):
+    # Score values by rarity
+    SCORE_TABLE = {
+        'common': 10,
+        'rare': 25,
+        'ultra_rare': 50
+    }
+    
+    # Rarity colors for debug/fallback rendering
+    RARITY_COLORS = {
+        'common': (255, 200, 100),     # Normal gold
+        'rare': (255, 215, 0),         # Bright gold
+        'ultra_rare': (255, 100, 255)  # Magenta/rainbow
+    }
+    
+    def __init__(self, x, item_type, rarity, speed, 
+                 asset_manager=None, theme_manager=None):
         self.x = x
-        self.y = -50  # Start above screen
+        self.y = -50
         self.type = item_type  # 'good' or 'bad'
+        self.rarity = rarity   # 'common', 'rare', 'ultra_rare'
         self.speed = speed
         self.assets = asset_manager
         
-        # Visual size (60x60 scaled sprites)
-        self.radius = 30  # For collision circle
-        self.size = 60    # For sprite rendering
+        # Get category from Rey's ThemeManager
+        if theme_manager:
+            self.category = theme_manager.get_theme()
+            self.theme_manager = theme_manager
+        else:
+            self.category = 'food'
+            self.theme_manager = None
         
-        # Rotation for visual flair
+        # Visual properties
+        self.radius = 30
+        self.size = 60
         self.rotation = 0
         self.rotation_speed = random.uniform(-2, 2)
+        
+        # Effect timer for Jen's visual hooks
+        self.glow_pulse = 0.0
+    
+    def get_score_value(self):
+        """Return points based on rarity."""
+        base = self.SCORE_TABLE.get(self.rarity, 10)
+        # Bad items score 0 regardless of rarity
+        return base if self.type == 'good' else 0
     
     def update(self, dt, speed_multiplier):
         """Fall down with difficulty scaling."""
         self.y += self.speed * speed_multiplier * dt * 60
         self.rotation += self.rotation_speed
+        
+        # Pulse glow for rare/ultra-rare (for Jen's renderer to use)
+        if self.rarity in ('rare', 'ultra_rare'):
+            self.glow_pulse = (self.glow_pulse + dt * 3) % (2 * 3.14159)
     
     def render(self, screen):
-        """Draw item sprite with rotation."""
+        """Draw item with rarity-based visual treatment."""
         if self.assets:
-            sprite_key = 'good_item' if self.type == 'good' else 'bad_item'
+            # Build sprite key: '{category}_{type}_{rarity}'
+            # e.g., 'food_good_common', 'culture_good_ultra_rare'
+            sprite_key = f'{self.category}_{self.type}_{self.rarity}'
             sprite = self.assets.get(sprite_key)
             
+            # Fallback to generic good/bad if specific not found
+            if not sprite:
+                sprite_key = 'good_item' if self.type == 'good' else 'bad_item'
+                sprite = self.assets.get(sprite_key)
+            
             if sprite:
-                # Rotate sprite
                 rotated = pygame.transform.rotate(sprite, self.rotation)
                 rect = rotated.get_rect(center=(int(self.x), int(self.y)))
+                
+                # Jen can check self.rarity to add glow overlay here
                 screen.blit(rotated, rect)
                 return
         
-        # Fallback circle
-        color = (255, 200, 100) if self.type == 'good' else (255, 80, 80)
-        pygame.draw.circle(screen, color, (int(self.x), int(self.y)), self.radius)
+        # Fallback: rarity-colored circle
+        base_color = self.RARITY_COLORS.get(self.rarity, (255, 200, 100))
+        if self.type == 'bad':
+            # Darken for bad items
+            base_color = tuple(max(0, c - 100) for c in base_color)
+        
+        pygame.draw.circle(screen, base_color, (int(self.x), int(self.y)), self.radius)
         pygame.draw.circle(screen, (255, 255, 255), (int(self.x), int(self.y)), 
                           self.radius, 2)
+        
+        # Rarity indicator dots
+        if self.rarity == 'rare':
+            pygame.draw.circle(screen, (255, 255, 0), 
+                             (int(self.x - 15), int(self.y - 15)), 5)
+        elif self.rarity == 'ultra_rare':
+            pygame.draw.circle(screen, (255, 0, 255), 
+                             (int(self.x - 15), int(self.y - 15)), 5)
+            pygame.draw.circle(screen, (0, 255, 255), 
+                             (int(self.x + 15), int(self.y - 15)), 5)
     
     def is_off_screen(self, screen_height):
-        """Check if fallen past bottom."""
         return self.y > screen_height + 50
     
     def get_hitbox(self):
-        """Circular hitbox for collision."""
-        # Use slightly smaller hitbox than visual for fair gameplay
         hit_radius = self.radius * 0.8
         return pygame.Rect(
             self.x - hit_radius,
@@ -61,14 +115,25 @@ class FallingItem:
 
 
 class ObjectManager:
-    """Spawns and manages all falling items."""
+    """Spawns and manages falling items with weighted rarity."""
     
-    def __init__(self, screen_width, asset_manager=None):
+    # Rarity probability distribution (must sum to 1.0)
+    RARITY_WEIGHTS = {
+        'common': 0.75,
+        'rare': 0.20,
+        'ultra_rare': 0.05
+    }
+    
+    # Anti-streak protection: max consecutive commons before forcing rare
+    MAX_COMMON_STREAK = 3
+    
+    def __init__(self, screen_width, asset_manager=None, theme_manager=None):
         self.screen_width = screen_width
         self.assets = asset_manager
-        self.items = []
+        self.theme_manager = theme_manager
+        self.category = theme_manager.get_theme() if theme_manager else 'food'
         
-        # Time tracking
+        self.items = []
         self.game_time = 0
         
         # Spawn timing
@@ -77,73 +142,108 @@ class ObjectManager:
         self.min_spawn_interval = 0.4
         self.current_spawn_interval = self.base_spawn_interval
         
-        # Difficulty scaling
+        # Difficulty
         self.speed_multiplier = 1.0
-
-        # INITIAL BURST: Spawn multiple items at game start
+        
+        # Initial burst
         self.initial_spawn_count = 4
         self.has_spawned_initial = False
-
-        # Missed good items tracking (for life deduction)
+        
+        # Missed tracking
         self._missed_good_count = 0
+        
+        # Streak prevention
+        self._spawn_history = []
+        self._consecutive_commons = 0
+    
+    def _roll_rarity(self):
+        """
+        Weighted random selection with anti-streak protection.
+        Returns: 'common', 'rare', or 'ultra_rare'
+        """
+        # Force rare if too many commons in a row
+        if self._consecutive_commons >= self.MAX_COMMON_STREAK:
+            self._consecutive_commons = 0
+            return 'rare' if random.random() > 0.05 else 'ultra_rare'
+        
+        # Standard weighted roll
+        rarities = list(self.RARITY_WEIGHTS.keys())
+        weights = list(self.RARITY_WEIGHTS.values())
+        
+        result = random.choices(rarities, weights=weights, k=1)[0]
+        
+        # Track streak
+        if result == 'common':
+            self._consecutive_commons += 1
+        else:
+            self._consecutive_commons = 0
+        
+        self._spawn_history.append(result)
+        if len(self._spawn_history) > 10:
+            self._spawn_history.pop(0)
+        
+        return result
+    
+    def spawn_item(self):
+        """Create new item with rolled rarity."""
+        # Proper margin to keep on screen
+        BORDER_WIDTH = 200
+        margin = BORDER_WIDTH + 30
+        x = random.randint(margin, self.screen_width - margin)
+        
+        # Roll rarity first
+        rarity = self._roll_rarity()
+        
+        # 70% good, 30% bad (independent of rarity)
+        item_type = 'good' if random.random() < 0.7 else 'bad'
+        
+        base_speed = random.uniform(4, 7)
+        
+        item = FallingItem(
+            x=x,
+            item_type=item_type,
+            rarity=rarity,
+            speed=base_speed,
+            asset_manager=self.assets,
+            theme_manager=self.theme_manager
+        )
+        self.items.append(item)
+    
+    def spawn_initial_burst(self):
+        """Spawn multiple items at game start."""
+        for i in range(self.initial_spawn_count):
+            x = random.randint(210, self.screen_width - 210)
+            rarity = self._roll_rarity()
+            item_type = 'good' if random.random() < 0.7 else 'bad'
+            base_speed = random.uniform(4, 7)
+
+            item = FallingItem(x, item_type, rarity, base_speed, 
+                             self.assets, self.theme_manager)
+            item.y = -50 - (i * 80)
+            self.items.append(item)
+
+        self.has_spawned_initial = True
     
     def update_difficulty(self, score):
-        """Increase speed based on time and score."""
-        # Time-based difficulty (every 5 seconds)
+        """Increase speed and spawn rate based on time and score."""
         time_level = int(self.game_time // 5)
-        
-        # Score-based difficulty
         score_level = score // 4
-        
         difficulty_level = time_level + score_level
         
-        # Falling speed increases
         self.speed_multiplier = 1.0 + difficulty_level * 0.14
         
-        # Spawn rate increases
         spawn_reduction = difficulty_level * 0.20
         self.current_spawn_interval = max(
             self.min_spawn_interval,
             self.base_spawn_interval - spawn_reduction
         )
     
-    def spawn_item(self):
-        """Create new falling item - kept on screen with proper margin."""
-        # Proper margin calculation to keep items fully on screen
-        BORDER_WIDTH = 200  # Keep in sync with player.py
-        margin = BORDER_WIDTH + self.items[0].radius if self.items else BORDER_WIDTH + 30
-        x = random.randint(margin, self.screen_width - margin)
-
-        item_type = 'good' if random.random() < 0.7 else 'bad'
-        base_speed = random.uniform(4, 7)
-        
-        item = FallingItem(x, item_type, base_speed, self.assets)
-        self.items.append(item)
-
-    def spawn_initial_burst(self):
-        """Spawn multiple items at game start with staggered heights."""
-        for i in range(self.initial_spawn_count):
-            x = random.randint(210, self.screen_width - 210)
-            item_type = 'good' if random.random() < 0.7 else 'bad'
-            base_speed = random.uniform(4, 7)
-
-            item = FallingItem(x, item_type, base_speed, self.assets)
-            # Stagger starting positions above screen
-            item.y = -50 - (i * 80)  # Each item 80px higher
-            self.items.append(item)
-
-        self.has_spawned_initial = True
-    
     def update(self, dt, score):
         """Update all items and spawn new ones."""
-        # INITIAL BURST on first update
         if not self.has_spawned_initial:
             self.spawn_initial_burst()
 
-        # Track game time
         self.game_time += dt
-        
-        # Update difficulty
         self.update_difficulty(score)
         
         # Spawn logic
@@ -152,30 +252,29 @@ class ObjectManager:
             self.spawn_item()
             self.spawn_timer = 0
         
-        # Update existing items
+        # Update items
         for item in self.items:
             item.update(dt, self.speed_multiplier)
 
-        # Check for missed good items before removing them
+        # Check missed good items
         self._missed_good_count = 0
         for item in self.items[:]:
             if item.is_off_screen(1080):
                 if item.type == 'good':
-                    self._missed_good_count += 1                    
+                    self._missed_good_count += 1
         
-        # Now remove off-screen items
+        # Remove off-screen
         self.items = [
             item for item in self.items 
             if not item.is_off_screen(1080)
         ]
     
     def render(self, screen):
-        """Draw all items."""
         for item in self.items:
             item.render(screen)
     
     def check_collisions(self, player_hitbox):
-        """Check collisions with player."""
+        """Check collisions, return caught items and missed count."""
         caught = []
         
         for item in self.items[:]:
@@ -183,8 +282,7 @@ class ObjectManager:
                 caught.append(item)
                 self.items.remove(item)
 
-        # Return missed good items count from update()
         missed_good = self._missed_good_count
-        self._missed_good_count = 0  # Reset for next frame
+        self._missed_good_count = 0
         
         return caught, missed_good
