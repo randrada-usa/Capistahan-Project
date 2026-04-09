@@ -74,8 +74,13 @@ class ThemeManager:
             str: Path with theme folder inserted if applicable
         """
         if asset_name and asset_name in self.themed_assets:
+            # FIXED: Use os.path.split instead of string split for cross-platform
             # Insert theme folder: assets/background.png → assets/food/background.png
-            parts = relative_path.split('/')
+            parts = relative_path.split(os.sep)
+            # Also handle forward slashes in case they were hardcoded
+            if len(parts) == 1:
+                parts = relative_path.split('/')
+            
             if len(parts) >= 2 and parts[0] == 'assets':
                 # Insert theme after 'assets'
                 themed_path = os.path.join(parts[0], self._theme, *parts[1:])

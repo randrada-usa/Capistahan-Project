@@ -1,9 +1,10 @@
 import pygame
-import cv2  # Added for camera window updates
+import cv2
 import os
 import random
-from src.game.falling_objects import FallingItem
+from src.game.falling_objects import FallingItem, Rarity
 from src.game.asset_manager import AssetManager
+from src.game.wish_system import make_wish
 
 class UIFallingManager:
     """Manages decorative falling items for the background."""
@@ -18,7 +19,7 @@ class UIFallingManager:
         x = random.randint(60, self.screen_width - 60)
         item_type = 'good' if random.random() < 0.7 else 'bad'
         speed = random.uniform(2, 4) 
-        self.items.append(FallingItem(x, item_type, speed, self.assets))
+        self.items.append(FallingItem(x, item_type, Rarity.COMMON, speed, self.assets))
 
     def update(self, dt):
         self.spawn_timer += dt
@@ -69,7 +70,8 @@ class EndScreen:
         self.font_score = pygame.font.Font(None, 74)
         self.font_high = pygame.font.Font(None, 48)
         self.font_prototype = pygame.font.Font(None, 36)
-        self.font_hints = pygame.font.Font(None, 36)  # For keyboard hints
+        self.font_hints = pygame.font.Font(None, 36)
+        self.font_wish = pygame.font.Font(None, 60)
 
         # Asset & Audio Initialization
         manager = AssetManager().load_all()
@@ -92,7 +94,14 @@ class EndScreen:
             m_w, m_h = self.menu_btn_img.get_size()
             self.menu_btn_img = pygame.transform.smoothscale(self.menu_btn_img, (int(m_w * self.button_scale), int(m_h * self.button_scale)))
 
-        # Positioning Buttons side-by-side
+        # Load Wish Button - scale to 0.6 (different from retry/menu)
+        self.wish_btn_img = self.assets_dict.get('start_button')
+        if self.wish_btn_img:
+            w_w, w_h = self.wish_btn_img.get_size()
+            self.wish_scale = 0.6
+            self.wish_btn_img = pygame.transform.smoothscale(self.wish_btn_img, (int(w_w * self.wish_scale), int(w_h * self.wish_scale)))
+
+        # Positioning Buttons
         btn_w = self.retry_btn_img.get_width() if self.retry_btn_img else 200
         btn_h = self.retry_btn_img.get_height() if self.retry_btn_img else 100
         spacing = 40
@@ -103,9 +112,21 @@ class EndScreen:
 
         self.retry_rect = pygame.Rect(start_x, btn_y, btn_w, btn_h)
         self.menu_rect = pygame.Rect(start_x + btn_w + spacing, btn_y, btn_w, btn_h)
+        
+        # FIXED: Wish button rect matches actual wish button image dimensions
+        if self.wish_btn_img:
+            wish_w = self.wish_btn_img.get_width()
+            wish_h = self.wish_btn_img.get_height()
+        else:
+            wish_w, wish_h = btn_w, btn_h  # fallback
+        
+        self.wish_rect = pygame.Rect(0, 0, wish_w, wish_h)
+        self.wish_rect.centerx = self.screen_width // 2
+        self.wish_rect.centery = btn_y - 100
 
         self.retry_hovering = False
         self.menu_hovering = False
+        self.wish_hovering = False
         
         self.falling = UIFallingManager(screen_width, screen_height, self.assets_dict)
         
@@ -113,35 +134,54 @@ class EndScreen:
         self.high_score = 0
         self.is_new_record = False
         self.overlay_alpha = 180 
+        
+        # Wish system state
+        self.wish_result = None
+        self.showing_wish_modal = False
+        self.game_state = None
 
         # Ensure Menu Music is playing
         if not pygame.mixer.music.get_busy():
-            pygame.mixer.music.load(self.music_paths['menu'])
-            pygame.mixer.music.play(-1)
+            try:
+                pygame.mixer.music.load(self.music_paths['menu'])
+                pygame.mixer.music.play(-1)
+            except:
+                pass
 
     def set_scores(self, final_score, high_score, is_new_record=False):
         self.final_score = final_score
         self.high_score = high_score
-        # --- FIX: Validate that new record is actually higher than previous best ---
-        # Only set is_new_record to True if final_score > high_score (the previous high)
-        # Note: high_score passed here should be the PREVIOUS high score before updating
         self.is_new_record = is_new_record and (final_score > 0) and (final_score >= high_score)
+
+    def set_game_state(self, game_state):
+        """Set game state to access wish system"""
+        self.game_state = game_state
 
     def handle_event(self, event):
         """Handle input events. Returns 'retry', 'menu', 'quit', or None."""
+        if self.showing_wish_modal:
+            if event.type == pygame.KEYDOWN or event.type == pygame.MOUSEBUTTONDOWN:
+                self.showing_wish_modal = False
+                self.wish_result = None
+            return None
+
         if event.type == pygame.MOUSEMOTION:
             self.retry_hovering = self.retry_rect.collidepoint(event.pos)
             self.menu_hovering = self.menu_rect.collidepoint(event.pos)
+            self.wish_hovering = self.wish_rect.collidepoint(event.pos)
 
         if event.type == pygame.KEYDOWN:
             if event.key in (pygame.K_RETURN, pygame.K_SPACE, pygame.K_r):
                 if 'click' in self.sounds: self.sounds['click'].play()
                 return "retry"
-            # --- ADDED: ESC to quit from end screen ---
             if event.key == pygame.K_ESCAPE:
                 return "quit"
 
         if event.type == pygame.MOUSEBUTTONDOWN:
+            if self.wish_rect.collidepoint(event.pos) and self.game_state and self.game_state.is_wish_eligible():
+                if 'click' in self.sounds: self.sounds['click'].play()
+                self._make_wish()
+                return None
             if self.retry_rect.collidepoint(event.pos):
                 if 'click' in self.sounds: self.sounds['click'].play()
                 return "retry"
@@ -150,6 +190,12 @@ class EndScreen:
                 return "menu"
 
         return None
+
+    def _make_wish(self):
+        """Execute wish roll and show result"""
+        if self.game_state:
+            self.wish_result = self.game_state.resolve_wish()
+            self.showing_wish_modal = True
 
     def _render_text_with_border(self, text, font, text_color, border_color, border_width=2):
         text_surface = font.render(text, True, text_color)
@@ -162,17 +208,104 @@ class EndScreen:
         bordered_surface.blit(text_surface, (border_width, border_width))
         return bordered_surface
 
+    def _draw_wish_modal(self, screen):
+        """Draw the wish result modal (Golden Ticket or Better Luck)"""
+        if not self.wish_result:
+            return
+            
+        overlay = pygame.Surface((self.screen_width, self.screen_height))
+        overlay.set_alpha(220)
+        overlay.fill((0, 0, 0))
+        screen.blit(overlay, (0, 0))
+        
+        box_w, box_h = 800, 400
+        box_x = (self.screen_width - box_w) // 2
+        box_y = (self.screen_height - box_h) // 2
+        
+        if self.wish_result.get('won'):
+            pygame.draw.rect(screen, (255, 215, 0), (box_x - 10, box_y - 10, box_w + 20, box_h + 20), border_radius=30)
+            pygame.draw.rect(screen, (60, 40, 0), (box_x, box_y, box_w, box_h), border_radius=20)
+            
+            title = self.font_wish.render("★ GOLDEN TICKET ★", True, (255, 215, 0))
+            screen.blit(title, title.get_rect(center=(self.screen_width // 2, box_y + 60)))
+            
+            prize = self.font_high.render(self.wish_result.get('prize_name', 'Gift Box'), True, (255, 255, 255))
+            screen.blit(prize, prize.get_rect(center=(self.screen_width // 2, box_y + 140)))
+            
+            code_text = self.font_high.render(f"Code: {self.wish_result.get('code', 'XXXXXX')}", True, (0, 255, 0))
+            screen.blit(code_text, code_text.get_rect(center=(self.screen_width // 2, box_y + 200)))
+            
+            inst = self.font_hints.render("Show this code to the 6-byte Studios booth!", True, (200, 200, 200))
+            screen.blit(inst, inst.get_rect(center=(self.screen_width // 2, box_y + 280)))
+            
+        else:
+            pygame.draw.rect(screen, (100, 100, 100), (box_x - 10, box_y - 10, box_w + 20, box_h + 20), border_radius=30)
+            pygame.draw.rect(screen, (40, 40, 60), (box_x, box_y, box_w, box_h), border_radius=20)
+            
+            title = self.font_wish.render("BETTER LUCK NEXT TIME", True, (200, 200, 200))
+            screen.blit(title, title.get_rect(center=(self.screen_width // 2, box_y + 80)))
+            
+            msg = self.font_high.render(self.wish_result.get('message', 'Not this time!'), True, (255, 255, 255))
+            screen.blit(msg, msg.get_rect(center=(self.screen_width // 2, box_y + 160)))
+            
+            enc = self.font_hints.render(self.wish_result.get('encouragement', 'Try again!'), True, (255, 200, 100))
+            screen.blit(enc, enc.get_rect(center=(self.screen_width // 2, box_y + 240)))
+        
+        continue_text = self.font_hints.render("Click or press any key to continue...", True, (150, 150, 150))
+        screen.blit(continue_text, continue_text.get_rect(center=(self.screen_width // 2, box_y + box_h - 50)))
+
+    def _draw_wish_button(self, screen, eligible):
+        """Draw the Make Wish button and progress bar"""
+        # Don't draw if showing modal
+        if self.showing_wish_modal:
+            return
+        
+        # Get wish status for progress bar (always show progress)
+        status = self.game_state.get_wish_status() if self.game_state else None
+        
+        if eligible:
+            # Draw the wish button
+            btn_img = self.wish_btn_img
+            if btn_img:
+                if self.wish_hovering:
+                    scaled = pygame.transform.smoothscale(btn_img, (int(btn_img.get_width()*1.05), int(btn_img.get_height()*1.05)))
+                    screen.blit(scaled, scaled.get_rect(center=self.wish_rect.center))
+                else:
+                    screen.blit(btn_img, self.wish_rect)
+            
+            # Button text
+            wish_text = self._render_text_with_border("MAKE A WISH!", self.font_high, (255, 215, 0), (0, 0, 0))
+            screen.blit(wish_text, wish_text.get_rect(center=self.wish_rect.center))
+        
+        # FIXED: Progress bar always shown when status available, not just when not eligible
+        if status:
+            bar_w = 300
+            bar_h = 20
+            bar_x = (self.screen_width - bar_w) // 2
+            bar_y = self.wish_rect.bottom + 20
+            
+            # Background
+            pygame.draw.rect(screen, (100, 100, 100), (bar_x, bar_y, bar_w, bar_h), border_radius=10)
+            # Progress
+            progress_w = int(bar_w * (status['progress_percent'] / 100))
+            # Gold if eligible, gray if not
+            bar_color = (255, 215, 0) if eligible else (150, 150, 150)
+            pygame.draw.rect(screen, bar_color, (bar_x, bar_y, progress_w, bar_h), border_radius=10)
+            # Border
+            pygame.draw.rect(screen, (255, 255, 255), (bar_x, bar_y, bar_w, bar_h), 2, border_radius=10)
+            
+            # Text
+            progress_text = self.font_hints.render(f"{status['current']}/{status['threshold']} points", True, (255, 255, 255))
+            screen.blit(progress_text, progress_text.get_rect(center=(self.screen_width // 2, bar_y + 40)))
+
     def render(self, screen, background_snapshot=None):
-        # 1. Background (Frozen game)
         if background_snapshot:
             screen.blit(background_snapshot, (0, 0))
         else:
             screen.fill((30, 30, 40))
 
-        # 2. Decorative Falling Items
         self.falling.render(screen)
 
-        # 3. Dark overlay
         overlay = pygame.Surface((self.screen_width, self.screen_height), pygame.SRCALPHA)
         overlay.fill((0, 0, 0, self.overlay_alpha)) 
         screen.blit(overlay, (0, 0))
@@ -180,19 +313,20 @@ class EndScreen:
         center_x = self.screen_width // 2
         score_y = self.retry_rect.top - 200
         
-        # 4. Score Text
         score_text = self.font_score.render(f"Score: {self.final_score}", True, (255, 255, 255))
         screen.blit(score_text, score_text.get_rect(center=(center_x, score_y)))
         
         high_text = self.font_high.render(f"Best: {self.high_score}", True, (255, 215, 0))
         screen.blit(high_text, high_text.get_rect(center=(center_x, score_y + 60)))
         
-        # --- FIXED: Only show NEW RECORD if is_new_record is True (validated in set_scores) ---
         if self.is_new_record:
             record_text = self._render_text_with_border("NEW RECORD!", self.font_high, (255, 215, 0), (0, 0, 0))
             screen.blit(record_text, record_text.get_rect(center=(center_x, score_y + 110)))
 
-        # 5. Render Buttons with Hover Effects
+        # Wish Button (with progress bar always visible)
+        eligible = self.game_state.is_wish_eligible() if self.game_state else False
+        self._draw_wish_button(screen, eligible)
+
         for btn_img, btn_rect, is_hover in [
             (self.retry_btn_img, self.retry_rect, self.retry_hovering),
             (self.menu_btn_img, self.menu_rect, self.menu_hovering)
@@ -204,7 +338,6 @@ class EndScreen:
                 else:
                     screen.blit(btn_img, btn_rect)
         
-        # 6. Keyboard Hints
         retry_hint = self._render_text_with_border("'R' or SPACE: Retry", self.font_hints, (200, 200, 200), (0, 0, 0))
         menu_hint = self._render_text_with_border("'ESC': Menu", self.font_hints, (200, 200, 200), (0, 0, 0))
         
@@ -212,16 +345,24 @@ class EndScreen:
         screen.blit(retry_hint, retry_hint.get_rect(center=(center_x - 100, hint_y)))
         screen.blit(menu_hint, menu_hint.get_rect(center=(center_x + 100, hint_y)))
         
-        # 7. Credits
         prototype_text = self._render_text_with_border("PROTOTYPE by: GAMEFRICKS", self.font_prototype, (255, 255, 255), (0, 0, 0))
         screen.blit(prototype_text, prototype_text.get_rect(center=(center_x, self.screen_height - 60)))
+        
+        if self.showing_wish_modal:
+            self._draw_wish_modal(screen)
 
-def show_end_screen(screen, final_score, high_score, is_new_record=False, 
+def show_end_screen(screen, game_state, 
                     background_snapshot=None, screen_width=1920, screen_height=1080,
                     gesture_controller=None):
-    """Main loop for the Game Over screen with persistent camera. Returns True to Restart, False to return to Menu."""
     end_screen = EndScreen(screen_width, screen_height)
+    
+    final_score = game_state.score
+    high_score = game_state.high_score
+    is_new_record = game_state.is_new_high_score()
+    
     end_screen.set_scores(final_score, high_score, is_new_record)
+    end_screen.set_game_state(game_state)
+    
     clock = pygame.time.Clock()
     
     while True:
@@ -240,17 +381,15 @@ def show_end_screen(screen, final_score, high_score, is_new_record=False,
                 fade(screen, screen_width, screen_height, fade_in=False)
                 return False
             elif action == "quit":
-                # --- ADDED: Handle quit action from ESC key ---
                 fade(screen, screen_width, screen_height, fade_in=False)
-                return False  # Return to menu (or could exit game entirely)
+                return False
         
-        # UPDATE CAMERA FEED - Keep the CV window live during game over screen!
         if gesture_controller:
-            gesture_controller.update()  # Process frame to keep feed active
+            gesture_controller.update()
             debug_frame = gesture_controller.get_debug_frame()
             if debug_frame is not None:
                 cv2.imshow("GAMEFRICKS PROTOTYPE01 - Camera Feed", debug_frame)
-                cv2.waitKey(1)  # Required for OpenCV window to process events
+                cv2.waitKey(1)
         
         end_screen.falling.update(dt)
         end_screen.render(screen, background_snapshot)
