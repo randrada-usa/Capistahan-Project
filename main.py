@@ -73,12 +73,12 @@ class Game:
         if CV_AVAILABLE:
             cv2.namedWindow("GAMEFRICKS PROTOTYPE01 - Camera Feed", cv2.WINDOW_NORMAL)
 
+        # Initialize CV BEFORE showing start screen
         self.init_cv()
 
     def reset_game(self, theme=None):
         """
         Reset game state for new game round, optionally switching theme.
-        Time-based mode: 60 second countdown per category.
         """
         
         # THEME SWITCHING
@@ -86,23 +86,21 @@ class Game:
             print(f"[Game] Switching theme to: {theme}")
             self.assets.change_theme(theme)
         
-        # GIO'S REQUEST: Create ThemeManager for passing to systems
+        # Create ThemeManager for Gio's systems
         theme_manager = ThemeManager(theme) if theme else self.assets.get_theme_manager()
         
-        # Reset game components with new assets AND theme_manager
+        # Reset game components
         self.player = Player(self.screen_w, self.screen_h, self.assets)
         
-        # GIO'S REQUEST: Pass theme_manager to ObjectManager
         self.object_manager = ObjectManager(
             screen_width=self.screen_w,
             asset_manager=self.assets,
-            theme_manager=theme_manager  # NEW: Required by Gio
+            theme_manager=theme_manager
         )
         
-        # GIO'S REQUEST: Pass theme_manager to GameState
         self.game_state = GameState(
             assets=self.assets,
-            theme_manager=theme_manager  # NEW: Required by Gio
+            theme_manager=theme_manager
         )
         
         self.hand_lost_timer = 0
@@ -131,6 +129,8 @@ class Game:
                 print(f"[Game] CV active with '{self.camera_profile}' profile")
             except Exception as e:
                 print(f"[Game] CV failed: {e}")
+                import traceback
+                traceback.print_exc()  # Print full error details
                 self.use_cv = False
 
     def handle_events(self):
@@ -171,6 +171,7 @@ class Game:
             else:
                 self.hand_lost_timer = max(0, self.hand_lost_timer - dt * 2)
         else:
+            # Fallback to mouse
             player_x, _ = pygame.mouse.get_pos()
 
         self.player.set_target_x(player_x)
@@ -186,7 +187,7 @@ class Game:
         return player_x, self.player.y
 
     def render(self, player_x, player_y):
-        """Render all graphics, timer, and the separate CV window."""
+        """Render all graphics."""
         bg = self.assets.get('background')
         if bg:
             self.screen.blit(bg, (0, 0))
@@ -212,7 +213,7 @@ class Game:
         self._update_cv_window()
 
     def _update_cv_window(self):
-        """Update the OpenCV debug window if enabled."""
+        """Update the OpenCV debug window."""
         if self.debug_window and self.use_cv and self.gesture_controller:
             debug_frame = self.gesture_controller.get_debug_frame()
             if debug_frame is not None:
@@ -220,7 +221,7 @@ class Game:
                 cv2.waitKey(1)
 
     def _draw_hud(self):
-        """Draws Score, Timer, High Score, and Heart (Health) Sprites."""
+        """Draws Score, Timer, High Score, and Heart."""
         score_text = self.font_large.render(f"Score: {self.game_state.score}", True, (255, 255, 255))
         self.screen.blit(score_text, (self.screen_w - 550, 80))
         
@@ -243,20 +244,23 @@ class Game:
                 self.screen.blit(warning, warning.get_rect(center=(self.screen_w // 2, 150)))
 
     def run(self):
-        """The main execution flow with persistent camera."""
+        """Main execution flow."""
         try:
             while self.running:
+                # Start Screen
                 if not show_start_screen(self.screen, self.screen_w, self.screen_h, 
                                     gesture_controller=self.gesture_controller if self.use_cv else None):
                     self.running = False
                     break
 
-                # WHEEL SCREEN - Get category from Jen's implementation
-                selected_category = 'food'  # REPLACE WITH JEN'S RETURN VALUE
+                # Wheel Screen (placeholder)
+                selected_category = 'food'
                 
+                # Reset game with selected theme
                 self.reset_game(theme=selected_category)
                 game_active = True
 
+                # Gameplay Loop
                 while game_active and self.running:
                     if not self.handle_events():
                         break
@@ -268,6 +272,7 @@ class Game:
                     if self.game_state.game_over:
                         game_active = False
 
+                # End Screen
                 if self.running:
                     pygame.mixer.music.fadeout(1000)
                     snapshot = self.screen.copy()

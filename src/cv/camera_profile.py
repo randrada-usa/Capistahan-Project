@@ -2,10 +2,6 @@
 camera_profile.py
 Camera calibration profiles for different mounting positions.
 Rey - CV Architecture Module
-
-Profiles:
-    - 'front': Standard webcam (default)
-    - 'high_angle': Table-mounted above monitor (Capiztahan event setup)
 """
 
 import cv2
@@ -21,9 +17,9 @@ class CameraProfile:
             'name': 'Front-facing Webcam',
             'description': 'Standard laptop webcam at eye level',
             
-            # MediaPipe detection thresholds
-            'min_detection_confidence': 0.3,
-            'min_presence_confidence': 0.3,
+            # MediaPipe detection thresholds (full key names)
+            'min_hand_detection_confidence': 0.3,
+            'min_hand_presence_confidence': 0.3,
             'min_tracking_confidence': 0.3,
             
             # Landmark selection
@@ -45,9 +41,9 @@ class CameraProfile:
             'name': 'High-Angle Overhead',
             'description': 'Camera mounted above monitor, pointing down 45-60°',
             
-            # Lower thresholds for smaller/distant hand
-            'min_detection_confidence': 0.25,
-            'min_presence_confidence': 0.25,
+            # Lower thresholds for smaller/distant hand (full key names)
+            'min_hand_detection_confidence': 0.25,
+            'min_hand_presence_confidence': 0.25,
             'min_tracking_confidence': 0.25,
             
             # Different landmark priority for top-down view
@@ -119,10 +115,12 @@ class CameraProfile:
         return primary, backup
     
     def get_mediapipe_options(self):
-        """Return MediaPipe HandLandmarker options dict."""
+        """
+        Return MediaPipe HandLandmarker options dict with CORRECT key names.
+        """
         return {
-            'min_hand_detection_confidence': self.get('min_detection_confidence'),
-            'min_hand_presence_confidence': self.get('min_presence_confidence'),
+            'min_hand_detection_confidence': self.get('min_hand_detection_confidence'),
+            'min_hand_presence_confidence': self.get('min_hand_presence_confidence'),
             'min_tracking_confidence': self.get('min_tracking_confidence'),
         }
     

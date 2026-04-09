@@ -1,6 +1,6 @@
 """
 src/cv/hand_tracker.py
-Hand tracking module for GameFrick Project - CAFE OPTIMIZED.
+Hand tracking module for GameFrick Project - HIGH-ANGLE OPTIMIZED.
 Rey - CV Integration
 """
 
@@ -19,13 +19,10 @@ warnings.filterwarnings('ignore', category=UserWarning, module='mediapipe')
 def _resolve_model_path(model_path):
     """
     Resolve the model path for both dev and PyInstaller .exe environments.
-    When frozen, files are extracted to sys._MEIPASS at runtime.
     """
     if getattr(sys, 'frozen', False):
-        # Running as .exe — look in PyInstaller's temp extraction folder
         base = sys._MEIPASS
     else:
-        # Running as script — look relative to project root
         base = os.path.abspath('.')
     
     resolved = os.path.join(base, model_path)
@@ -42,23 +39,17 @@ def _resolve_model_path(model_path):
 class HandTracker:
     """
     Single-hand tracker using MediaPipe 0.10.33 Task API.
-    CAFE OPTIMIZED: Better low-light handling, velocity prediction for fast movement.
-    
-    OUTPUT FORMAT for Gio:
-    - get_position() returns: (norm_x, norm_y) tuple
-    - norm_x, norm_y: 0.0 to 1.0 (normalized screen coordinates)
-    - Uses PALM CENTER for stability
-    - Returns None if no hand detected (with prediction grace period)
+    HIGH-ANGLE OPTIMIZED: Better overhead camera handling.
     """
     
     def __init__(self, camera_index=0, model_path="hand_landmarker.task", 
-                 camera_profile='front'):  # ADD camera_profile parameter
+                 camera_profile='front'):
         
         self.camera_index = camera_index
         self.cap = None
         self.frame_timestamp = 0
         
-        # NEW: Camera profile system
+        # Camera profile system
         self.profile = CameraProfile(camera_profile)
         print(f"[HandTracker] Using camera profile: {self.profile.get('name')}")
         
@@ -75,12 +66,13 @@ class HandTracker:
         resolved_model_path = _resolve_model_path(model_path)
         print(f"[HandTracker] Loading model from: {resolved_model_path}")
         
-        # MODIFIED: Use profile settings for MediaPipe
+        # Use profile settings for MediaPipe
         mp_options = self.profile.get_mediapipe_options()
         
         from mediapipe.tasks.python.vision import HandLandmarker, HandLandmarkerOptions, RunningMode
         from mediapipe.tasks.python.core.base_options import BaseOptions
         
+        # FIXED: Use correct key names from profile
         options = HandLandmarkerOptions(
             base_options=BaseOptions(model_asset_path=resolved_model_path),
             running_mode=RunningMode.VIDEO,
@@ -93,12 +85,12 @@ class HandTracker:
         self.landmarker = HandLandmarker.create_from_options(options)
         
         print(f"[HandTracker] Profile '{camera_profile}' loaded")
-        print(f"[HandTracker] Detection: {mp_options['min_detection_confidence']}, "
+        print(f"[HandTracker] Detection: {mp_options['min_hand_detection_confidence']}, "
+              f"Presence: {mp_options['min_hand_presence_confidence']}, "
               f"Tracking: {mp_options['min_tracking_confidence']}")
     
     def start_camera(self):
         """Initialize camera capture with profile-specific settings."""
-        # Try indices 0, 1, 2
         for index in [self.camera_index, 0, 1, 2]:
             self.cap = cv2.VideoCapture(index)
             if self.cap.isOpened():
@@ -109,7 +101,7 @@ class HandTracker:
         if not self.cap.isOpened():
             raise RuntimeError("[HandTracker] No camera found on indices 0, 1, 2")
         
-        # NEW: Apply profile-specific camera settings
+        # Apply profile-specific camera settings
         self.profile.apply_camera_settings(self.cap)
         
         # Set FPS
@@ -135,13 +127,11 @@ class HandTracker:
     
     def get_palm_center(self, hand_landmarks):
         """
-        MODIFIED: Use profile-specific landmark selection.
-        Returns position based on primary/backup landmark configuration.
+        Use profile-specific landmark selection.
         """
         if not hand_landmarks:
             return None
         
-        # Get profile-specific landmark indices
         primary_indices, backup_indices = self.profile.get_landmark_indices()
         
         def get_average(indices):
@@ -152,16 +142,14 @@ class HandTracker:
                 return None
             return (x_sum / count, y_sum / count)
         
-        # Try primary first
         pos = get_average(primary_indices)
         if pos is None:
-            # Fallback to backup
             pos = get_average(backup_indices)
         
         return pos
     
     def smooth_position(self, new_pos):
-        """Adaptive smoothing - less lag during fast movement."""
+        """Adaptive smoothing."""
         if new_pos is None:
             return None
         
@@ -183,10 +171,7 @@ class HandTracker:
         return (avg_x, avg_y)
     
     def get_position(self, hand_landmarks):
-        """
-        Get smoothed position with VELOCITY PREDICTION for fast swipes.
-        Returns: (norm_x, norm_y) or None
-        """
+        """Get smoothed position with velocity prediction."""
         if hand_landmarks is None:
             self.missed_frames += 1
             
@@ -220,7 +205,7 @@ class HandTracker:
         return smoothed
     
     def draw_skeleton(self, frame, hand_landmarks):
-        """Draw hand skeleton with palm center highlighted."""
+        """Draw hand skeleton."""
         if not hand_landmarks:
             return frame
         
