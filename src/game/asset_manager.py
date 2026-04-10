@@ -42,6 +42,53 @@ class AssetManager:
     def load_all(self):
         """Load all assets for the current theme."""
         theme = self.theme_manager.get_theme()
+        log(f"[AssetManager] Loading assets for theme: {theme}")
+        log(f"[AssetManager] Base path: {self.base_path}")
+
+        # --- WHEEL SCREEN ASSETS (Shared) ---
+        self._load_shared('wheel_base', os.path.join("ui", "wheel.png"))
+        # Increased icon size from 100 to 140
+        self._load_shared('perla_food', os.path.join("ui", "perla_food.png"), target_size=(285, 285))
+        self._load_shared('perla_culture', os.path.join("ui", "perla_culture.png"), target_size=(285, 285))
+        self._load_shared('perla_people', os.path.join("ui", "perla_people.png"), target_size=(285, 285))
+        
+        # --- THEME-SPECIFIC BACKGROUNDS ---
+        self._load_themed('background', 
+            os.path.join("backgrounds", "background.png"), 
+            target_size=(1920, 1080))
+        
+        # --- THEME-SPECIFIC PLAYER SPRITES ---
+        self._load_themed('sprite_idle',
+            os.path.join("sprites", "Sprite1.png"),
+            target_size=(190, 320))
+        self._load_themed('sprite_right',
+            os.path.join("sprites", "Sprite_right.png"),
+            target_size=(210, 340))
+        self._load_themed('sprite_left',
+            os.path.join("sprites", "Sprite_left.png"),
+            target_size=(210, 340))
+        
+        # --- CORNER CHIBI (New for Capiztahan) ---
+        self._load_themed('corner_chibi',
+            os.path.join("sprites", "corner_chibi.png"),
+            target_size=(150, 150))
+
+        # --- THEME-SPECIFIC ITEMS ---
+        self._load_themed('good_item',
+            os.path.join("sprites", "Good item.png"),
+            target_size=(100, 100))
+        self._load_themed('bad_item',
+            os.path.join("sprites", "Bad item.png"), 
+            target_size=(100, 100))
+
+        # --- SHARED UI ASSETS (always from root assets/) ---
+        self._load_shared('h1', os.path.join("sprites", "H1.png"), target_size=(300, 100))
+        self._load_shared('h2', os.path.join("sprites", "H2.png"), target_size=(300, 100))
+        self._load_shared('h3', os.path.join("sprites", "H3.png"), target_size=(300, 100))
+        self._load_shared('h4', os.path.join("sprites", "H4.png"), target_size=(300, 100))
+        self._load_shared('h5', os.path.join("sprites", "H5.png"), target_size=(300, 100))
+        self._load_shared('h6', os.path.join("sprites", "H6.png"), target_size=(300, 100))
+
         log(f"[AssetManager] Loading theme: {theme}")
         
         # === SPECIFIC FOOD ITEMS (from assets/food/) ===

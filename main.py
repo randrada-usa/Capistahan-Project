@@ -69,6 +69,24 @@ class Game:
     def run(self):
         """Main game flow."""
         try:
+            while self.running:
+                # Start Screen
+                if not show_start_screen(
+                    self.screen,
+                    self.screen_w,
+                    self.screen_h,
+                    gesture_controller=self.gesture_controller if self.use_cv else None
+                ):
+                    self.running = False
+                    break
+
+                # CAPTURE START SCREEN FOR MODAL BACKGROUND
+                start_screen_snapshot = self.screen.copy()
+
+                # WHEEL SCREEN - Category selection (with pop-out effect)
+                selected_category = show_wheel_screen(
+                    self.screen,
+                    self.screen_w,
             while True:
                 # 1. START SCREEN
                 print("[Game] Showing start screen...")
@@ -88,6 +106,48 @@ class Game:
                     self.screen_w,
                     self.screen_h,
                     gesture_controller=self.gesture_controller if self.use_cv else None,
+                    assets=self.assets,
+                    background=start_screen_snapshot  # NEW
+                )
+
+                if selected_category is None:
+                    continue  # Back to start screen
+
+                print(f"[Game] Selected category: {selected_category}")
+
+                # Gameplay with selected category
+                self.reset_game(category=selected_category)
+                game_active = True
+
+                while game_active and self.running:
+                    dt = self.clock.tick(self.fps) / 1000.0
+
+                    if not self.handle_events():
+                        break
+
+                    p_x, p_y = self.update(dt)
+                    self.render(p_x, p_y)
+
+                    if self.game_state.game_over:
+                        game_active = False
+
+                # End Screen
+                if self.running:
+                    pygame.mixer.music.fadeout(1000)
+                    snapshot = self.screen.copy()
+
+                    retry = show_end_screen(
+                        self.screen,
+                        self.game_state,
+                        snapshot,
+                        self.screen_w,
+                        self.screen_h,
+                        gesture_controller=self.gesture_controller if self.use_cv else None
+                    )
+
+                    if not retry:
+                        pass
+
                     assets=None
                 )
                 
