@@ -1,6 +1,6 @@
 """
 main.py
-Capiztahan Gacha Game - Main Entry Point (CLEAN MERGE)
+Capiztahan Gacha Game - Main Entry Point
 """
 
 import sys
@@ -56,14 +56,6 @@ class Game:
             
         self.init_cv()
         
-        # Pre-load shared UI assets (wheel icons, etc.) once at startup
-        print("[Game] Pre-loading shared UI assets...")
-        try:
-            self.pre_assets = AssetManager('food').load_all()
-        except Exception as e:
-            print(f"[Game] Pre-asset load failed: {e}")
-            self.pre_assets = None
-
         # Theme/Assets set after wheel
         self.theme_manager = None
         self.assets = None
@@ -93,7 +85,6 @@ class Game:
         try:
             while self.running:
                 # 1. START SCREEN
-                # ==============================
                 print("[Game] Showing start screen...")
                 result, start_screen_snapshot = show_start_screen(
                     self.screen, 
@@ -106,7 +97,7 @@ class Game:
                     print("[Game] User quit from start screen")
                     break
                 
-                # 2. WHEEL SCREEN
+                # 2. WHEEL SCREEN - with loaded wheel assets
                 print("[Game] Showing wheel screen...")
                 selected_theme = show_wheel_screen(
                     self.screen,
@@ -119,11 +110,11 @@ class Game:
                 
                 if selected_theme is None:
                     print("[Game] User quit from wheel")
-                    continue
+                    break
                 
                 print(f"[Game] Selected theme: {selected_theme}")
                 
-                # 3. LOAD ASSETS (NOW loads food_bg.png, etc.)
+                # 3. LOAD THEME-SPECIFIC ASSETS
                 try:
                     self.theme_manager = ThemeManager(selected_theme)
                     self.assets = AssetManager(selected_theme).load_all()
@@ -131,9 +122,7 @@ class Game:
                     print(f"[Game] Error loading assets: {e}")
                     continue
                 
-                # ==============================
                 # 4. GAMEPLAY LOOP
-                # ==============================
                 print("[Game] Starting gameplay loop...")
                 game_loop = GameLoop(
                     screen=self.screen,
@@ -151,9 +140,7 @@ class Game:
                 
                 print(f"[Game] Game over! Score: {game_result['game_state'].score}")
                 
-                # ==============================
                 # 5. END SCREEN
-                # ==============================
                 retry = show_end_screen(
                     self.screen,
                     game_result['game_state'],
