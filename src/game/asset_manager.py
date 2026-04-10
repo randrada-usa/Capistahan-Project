@@ -47,10 +47,16 @@ class AssetManager:
 
         # --- WHEEL SCREEN ASSETS (Shared) ---
         self._load_shared('wheel_base', os.path.join("ui", "wheel.png"))
-        # Increased icon size from 100 to 140
         self._load_shared('perla_food', os.path.join("ui", "perla_food.png"), target_size=(285, 285))
         self._load_shared('perla_culture', os.path.join("ui", "perla_culture.png"), target_size=(285, 285))
         self._load_shared('perla_people', os.path.join("ui", "perla_people.png"), target_size=(285, 285))
+        
+        # --- UI ASSETS ---
+        self._load_shared('start_button', os.path.join("ui", "start_button.png"))
+        self._load_shared('retry_button', os.path.join("ui", "retry_button.png"))
+        self._load_shared('menu_button', os.path.join("ui", "menu_button.png"))
+        self._load_shared('title1', os.path.join("ui", "title1.png"))
+        self._load_shared('title2', os.path.join("ui", "title2.png"))
         
         # --- THEME-SPECIFIC BACKGROUNDS ---
         self._load_themed('background', 
@@ -68,7 +74,7 @@ class AssetManager:
             os.path.join("sprites", "Sprite_left.png"),
             target_size=(210, 340))
         
-        # --- CORNER CHIBI (New for Capiztahan) ---
+        # --- CORNER CHIBI ---
         self._load_themed('corner_chibi',
             os.path.join("sprites", "corner_chibi.png"),
             target_size=(150, 150))
@@ -81,62 +87,34 @@ class AssetManager:
             os.path.join("sprites", "Bad item.png"), 
             target_size=(100, 100))
 
-        # --- SHARED UI ASSETS (always from root assets/) ---
-        self._load_shared('h1', os.path.join("sprites", "H1.png"), target_size=(300, 100))
-        self._load_shared('h2', os.path.join("sprites", "H2.png"), target_size=(300, 100))
-        self._load_shared('h3', os.path.join("sprites", "H3.png"), target_size=(300, 100))
-        self._load_shared('h4', os.path.join("sprites", "H4.png"), target_size=(300, 100))
-        self._load_shared('h5', os.path.join("sprites", "H5.png"), target_size=(300, 100))
-        self._load_shared('h6', os.path.join("sprites", "H6.png"), target_size=(300, 100))
-
-        log(f"[AssetManager] Loading theme: {theme}")
+        # --- HEALTH HEARTS ---
+        for i in range(1, 7):
+            self._load_shared(f'h{i}', os.path.join("sprites", f"H{i}.png"), target_size=(300, 100))
         
-        # === SPECIFIC FOOD ITEMS (from assets/food/) ===
-        # These are loaded as: Stick_O, Isaw, Puto, Dynamite, BadItem
-        food_items = {
-            'Stick_O': (100, 100),  # Ultra Rare
-            'Isaw': (100, 100),     # Rare
-            'Puto': (100, 100),     # Common
-            'Dynamite': (100, 100), # Very Common
-            'BadItem': (100, 100)   # Bad items
-        }
-        
-        for item_name, size in food_items.items():
-            # Loads from: assets/food/Stick_O.png, etc.
-            self._load_themed(item_name, f"{item_name}.png", target_size=size)
-        
-        # === GLOW EFFECTS (from assets/sprites/) ===
+        # === GLOW EFFECTS ===
         self._load_shared('common_glow', os.path.join("sprites", "Common_glow.png"), (120, 120))
         self._load_shared('rare_glow', os.path.join("sprites", "Rare_glow.png"), (120, 120))
         self._load_shared('ultrarare_glow', os.path.join("sprites", "Ultrarare_glow.png"), (120, 120))
         
-        # === PERLA (from assets/sprites/) ===
+        # === PERLA ===
         self._load_shared('perla_default', os.path.join("sprites", "Perla (default).png"), (150, 150))
-        # Optional expressions (silent fail if missing)
         for expr in ['happy', 'excited', 'sad']:
             try:
                 self._load_shared(f'perla_{expr}', os.path.join("sprites", f"Perla ({expr}).png"), (150, 150))
             except:
                 pass
         
-        # === BACKGROUND (from assets/food/background/food_bg.png) ===
-        self._load_background()
+        # === FOOD ITEMS ===
+        food_items = {
+            'Stick_O': (100, 100),
+            'Isaw': (100, 100),
+            'Puto': (100, 100),
+            'Dynamite': (100, 100),
+            'BadItem': (100, 100)
+        }
         
-        # === PLAYER SPRITES ===
-        self._load_themed('sprite_idle', os.path.join("sprites", "Sprite1.png"), (190, 320))
-        self._load_themed('sprite_right', os.path.join("sprites", "Sprite_right.png"), (210, 340))
-        self._load_themed('sprite_left', os.path.join("sprites", "Sprite_left.png"), (210, 340))
-        
-        # === HEALTH HEARTS ===
-        for i in range(1, 7):
-            self._load_shared(f'h{i}', os.path.join("sprites", f"H{i}.png"), (300, 100))
-        
-        # === UI BUTTONS ===
-        self._load_shared('start_button', os.path.join("ui", "start_button.png"))
-        self._load_shared('retry_button', os.path.join("ui", "retry_button.png"))
-        self._load_shared('menu_button', os.path.join("ui", "menu_button.png"))
-        self._load_shared('title1', os.path.join("ui", "title1.png"))
-        self._load_shared('title2', os.path.join("ui", "title2.png"))
+        for item_name, size in food_items.items():
+            self._load_themed(item_name, f"{item_name}.png", target_size=size)
         
         # === AUDIO ===
         self._load_audio('click', os.path.join("audio", "Start (mp3cut.net).mp3"))
@@ -162,20 +140,6 @@ class AssetManager:
         log("[AssetManager] All assets loaded")
         return self
     
-    def _load_background(self):
-        """Load themed background from assets/{theme}/background/{theme}_bg.png."""
-        theme = self.theme_manager.get_theme()
-        
-        # Specific path: assets/food/background/food_bg.png
-        themed_bg = os.path.join(self.base_path, theme, "background", f"{theme}_bg.png")
-        
-        if os.path.exists(themed_bg):
-            log(f"[AssetManager] Loading background: {theme}/background/{theme}_bg.png")
-            self.assets['background'] = self._load_image_file(themed_bg, (1920, 1080))
-        else:
-            log(f"[AssetManager] Background not found: {themed_bg}")
-            self.assets['background'] = None
-    
     def _load_themed(self, asset_name, relative_path, target_size=None):
         """
         Load from theme folder first, fallback to root.
@@ -196,7 +160,6 @@ class AssetManager:
             self.assets[asset_name] = self._load_image_file(shared_full, target_size)
             return
         
-        # Not found
         log(f"[AssetManager] Missing: {themed_full}")
         self.assets[asset_name] = None
     
@@ -204,6 +167,8 @@ class AssetManager:
         """Load from root assets folder."""
         full_path = os.path.join(self.base_path, relative_path)
         self.assets[asset_name] = self._load_image_file(full_path, target_size)
+        if self.assets[asset_name] is None:
+            log(f"[AssetManager] Missing shared asset: {relative_path}")
     
     def _load_audio(self, sound_name, relative_path):
         """Load audio file."""
@@ -221,7 +186,7 @@ class AssetManager:
                 image = pygame.transform.smoothscale(image, target_size)
             return image
         except Exception as e:
-            log(f"[AssetManager] Error: {e}")
+            log(f"[AssetManager] Error loading {full_path}: {e}")
             return None
     
     def get(self, name):
@@ -231,3 +196,7 @@ class AssetManager:
     def get_sound(self, name):
         """Get sound by key."""
         return self.sounds.get(name)
+    
+    def get_theme_manager(self):
+        """Get theme manager."""
+        return self.theme_manager

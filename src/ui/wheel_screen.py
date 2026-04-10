@@ -1,5 +1,5 @@
 """
-wheel_screen.py - CAPIZTAHAN GACHA WHEEL (CLEANED - No Duplicates)
+wheel_screen.py - CAPIZTAHAN GACHA WHEEL
 """
 
 import pygame
@@ -28,10 +28,10 @@ class WheelScreen:
         self.assets = assets
         self.background = background
         
-        # === ADJUST THESE FOR BIGGER/OUTER ICONS ===
+        # Wheel configuration
         self.wheel_radius = 220          
-        self.icon_size = 280             # INCREASED from 240 for bigger icons
-        self.icon_distance = 1.3        # INCREASED from 0.85 for outer position (try 1.0 or 1.1)
+        self.icon_size = 280
+        self.icon_distance = 1.3
         self.wheel_scale = 0.6
         
         self.icon_angles = {
@@ -46,12 +46,14 @@ class WheelScreen:
         self.categories = [Category.FOOD, Category.CULTURE, Category.PEOPLE]
         self.segment_angle = 120
         
+        # States
         self.STATE_POPPING = "popping"
         self.STATE_SPINNING = "spinning"
         self.STATE_SELECTED = "selected"
         self.STATE_TRANSITIONING = "transitioning"
         self.state = self.STATE_POPPING
         
+        # Animation timings
         self.pop_duration = 800
         self.pop_progress = 0.0
         self.current_scale = 0.0
@@ -69,16 +71,19 @@ class WheelScreen:
         self.pointer_bounce = 0
         self.pointer_direction = 1
         
+        # Fonts
         self.font_large = pygame.font.Font(None, 100)
         self.font_medium = pygame.font.Font(None, 60)
         self.font_small = pygame.font.Font(None, 40)
         
         self.on_category_selected = None
         
+        # Load assets
         self._load_assets()
         self._calculate_spin()
     
     def _load_assets(self):
+        """Load wheel and icon assets from AssetManager"""
         if self.assets:
             wheel_img = self.assets.get('wheel_base')
             self.icons_orig = {
@@ -86,15 +91,23 @@ class WheelScreen:
                 Category.CULTURE: self.assets.get('perla_culture'),
                 Category.PEOPLE: self.assets.get('perla_people')
             }
+            print(f"[Wheel] Loaded wheel_base: {wheel_img is not None}")
+            print(f"[Wheel] Loaded perla_food: {self.icons_orig[Category.FOOD] is not None}")
+            print(f"[Wheel] Loaded perla_culture: {self.icons_orig[Category.CULTURE] is not None}")
+            print(f"[Wheel] Loaded perla_people: {self.icons_orig[Category.PEOPLE] is not None}")
         else:
+            print("[Wheel] Warning: No assets provided!")
             wheel_img = None
             self.icons_orig = {}
         
+        # Create placeholders only if assets missing
         if not wheel_img:
+            print("[Wheel] Using wheel placeholder")
             wheel_img = self._create_wheel_placeholder()
         
         for cat in Category:
             if not self.icons_orig.get(cat):
+                print(f"[Wheel] Using {cat.value} icon placeholder")
                 self.icons_orig[cat] = self._create_icon_placeholder(cat)
         
         self.wheel_orig = self._make_square(wheel_img)
@@ -166,17 +179,15 @@ class WheelScreen:
         random_offset = random.randint(0, 359)
         self.target_rotation = full_rotations + random_offset
         
-        # Changed from 270 to 15 to align with FOOD icon at -15°
-        # When wheel rotates +15°, FOOD (-15°) reaches top (0°)
+        # Option B: Align with FOOD icon at -15°
         final_angle = (self.target_rotation + 15) % 360
         segment_index = int(final_angle / self.segment_angle) % 3
         
-        # Reordered: FOOD (0-120°), PEOPLE (120-240°), CULTURE (240-360°)
-        # This matches the physical positions when each icon reaches the top
+        # Reordered to match physical positions
         self.categories = [Category.FOOD, Category.PEOPLE, Category.CULTURE]
         self.selected_category = self.categories[segment_index]
         
-        print(f"[Wheel] Target rotation: {self.target_rotation}°, Final angle: {final_angle}°, Segment: {segment_index}, Selected: {self.selected_category.value}")
+        print(f"[Wheel] Target: {self.target_rotation}°, Final: {final_angle}°, Selected: {self.selected_category.value}")
     
     def update(self, dt):
         current_time = pygame.time.get_ticks()
@@ -214,13 +225,13 @@ class WheelScreen:
             self.pointer_direction *= -1
     
     def draw(self, screen):
+        # Draw background first (start screen snapshot)
         if self.background:
             screen.blit(self.background, (0, 0))
         else:
             screen.fill((20, 20, 30))
         
-        # SMOOTH TRANSITION: End at same alpha as spinning state
-        # Lerp from 0 to target (120) during pop animation
+        # Smooth transparency transition
         target_alpha = 120
         if self.state == self.STATE_POPPING:
             overlay_alpha = int(target_alpha * self.pop_progress)
@@ -232,6 +243,7 @@ class WheelScreen:
         overlay.set_alpha(overlay_alpha)
         screen.blit(overlay, (0, 0))
         
+        # Title
         title = self.font_large.render("SPIN THE WHEEL!", True, (255, 215, 0))
         screen.blit(title, title.get_rect(center=(self.center_x, 170)))
         
@@ -248,11 +260,11 @@ class WheelScreen:
             screen.blit(countdown, countdown.get_rect(center=(self.center_x, self.screen_height - 100)))
     
     def _draw_wheel(self, screen):
-        """Draw wheel with upright icons - CLEAN VERSION (no duplicates)"""
+        """Draw wheel with upright icons"""
         if self.current_scale <= 0.01:
             return
         
-        # === DRAW WHEEL ===
+        # Draw wheel
         base_size = self.wheel_orig.get_width()
         new_size = int(base_size * self.current_scale * self.wheel_scale)
         
@@ -264,24 +276,20 @@ class WheelScreen:
         
         screen.blit(wheel_img, wheel_rect)
         
-        # === DRAW ICONS (UPRIGHT - NO ROTATION) ===
+        # Draw icons (upright - no rotation)
         for category in self.categories:
             base_angle = self.icon_angles[category]
             current_angle = base_angle + self.current_rotation
             rad = math.radians(current_angle - 90)
             
-            # IMPORTANT: Include wheel_scale so icons scale with wheel!
             distance = self.wheel_radius * self.icon_distance * self.current_scale * self.wheel_scale
             x = self.center_x + math.cos(rad) * distance
             y = self.center_y + math.sin(rad) * distance
             
             icon_orig = self.icons_orig[category]
             if icon_orig:
-                # Scale icon with wheel_scale too
                 new_icon_size = int(self.icon_size * self.current_scale * self.wheel_scale)
                 scaled_icon = pygame.transform.smoothscale(icon_orig, (new_icon_size, new_icon_size))
-                
-                # UPRIGHT: Just center, don't rotate
                 icon_rect = scaled_icon.get_rect(center=(int(x), int(y)))
                 
                 if self.state == self.STATE_POPPING and self.current_alpha < 255:
@@ -290,37 +298,31 @@ class WheelScreen:
                 screen.blit(scaled_icon, icon_rect)
     
     def _draw_pointer(self, screen):
-        # 1 o'clock position: 330 degrees (30 degrees clockwise from top)
-        # 0=right, 90=down, 180=left, 270=up, 330=1 o'clock
+        """Pointer at 1 o'clock position (300 degrees)"""
         angle = math.radians(300)
         
-        # Distance from center: wheel radius + margin to sit outside
+        # Distance from center - outside the wheel
         distance = self.wheel_radius * self.current_scale * self.wheel_scale + 200
         
-        # Base position at 1 o'clock
         base_x = self.center_x + math.cos(angle) * distance
         base_y = self.center_y + math.sin(angle) * distance
         
-        # Bounce effect (radial - toward/away from center)
+        # Bounce effect
         bounce = self.pointer_bounce * self.current_scale
         pointer_x = base_x + math.cos(angle) * bounce
         pointer_y = base_y + math.sin(angle) * bounce
         scale = self.current_scale
         
-        # Triangle points toward center (down-left from 1 o'clock)
-        # Tip is closer to center, base is at pointer position
+        # Triangle pointing toward center
         tip_dist = 35 * scale
         half_base = 20 * scale
         
-        # Vector pointing toward center
-        dx = -math.cos(angle)  # negative because we want inward
+        dx = -math.cos(angle)
         dy = -math.sin(angle)
         
-        # Perpendicular vector for base width
         perp_x = -dy
         perp_y = dx
         
-        # Calculate triangle points
         tip_x = pointer_x + dx * tip_dist
         tip_y = pointer_y + dy * tip_dist
         
@@ -336,6 +338,7 @@ class WheelScreen:
         pygame.draw.circle(screen, (255, 215, 0), (int(pointer_x), int(pointer_y)), int(8 * scale))
     
     def _draw_result(self, screen):
+        """Draw result modal"""
         overlay = pygame.Surface((self.screen_width, self.screen_height), pygame.SRCALPHA)
         overlay.set_alpha(200)
         overlay.fill((0, 0, 0))

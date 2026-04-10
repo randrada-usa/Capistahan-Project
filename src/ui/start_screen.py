@@ -117,7 +117,6 @@ class StartScreen:
         self.falling = UIFallingManager(screen_width, screen_height, self.assets_dict)
         self.font_hints = pygame.font.Font(None, 48)
         
-        # Store snapshot before fade
         self.snapshot = None
 
     def handle_event(self, event):
@@ -204,15 +203,14 @@ def show_start_screen(screen, screen_width=1920, screen_height=1080, gesture_con
                 # CAPTURE SCREEN BEFORE ANYTHING ELSE
                 snapshot = start_screen.capture_snapshot(screen)
                 pygame.mixer.music.fadeout(1000)
-                # REMOVED: fade(screen, screen_width, screen_height, fade_in=False)
-                # Let the wheel handle all visual transition
+                # No fade - let wheel handle transition
                 return True, snapshot
             elif action == 'quit':
-                # Keep fade for quit to black out before exit
+                # Fade for quit
                 fade(screen, screen_width, screen_height, fade_in=False)
                 return False, None
         
-        # UPDATE CAMERA FEED - Keep the CV window live during menu!
+        # UPDATE CAMERA FEED
         if gesture_controller:
             gesture_controller.update()
             debug_frame = gesture_controller.get_debug_frame()

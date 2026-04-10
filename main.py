@@ -60,6 +60,10 @@ class Game:
         self.theme_manager = None
         self.assets = None
         self.running = True
+        
+        # Load wheel assets once (shared across all screens)
+        print("[Game] Loading wheel assets...")
+        self.wheel_assets = AssetManager().load_all()
     
     def init_cv(self):
         """Initialize Gesture Controller."""
@@ -93,15 +97,15 @@ class Game:
                     print("[Game] User quit from start screen")
                     break
                 
-                # 2. WHEEL SCREEN
+                # 2. WHEEL SCREEN - with loaded wheel assets
                 print("[Game] Showing wheel screen...")
                 selected_theme = show_wheel_screen(
                     self.screen,
                     self.screen_w,
                     self.screen_h,
                     gesture_controller=self.gesture_controller if self.use_cv else None,
-                    assets=None,  # No assets yet, wheel uses its own
-                    background=start_screen_snapshot  # Captured start screen behind wheel
+                    assets=self.wheel_assets,  # Pass loaded wheel assets
+                    background=start_screen_snapshot
                 )
                 
                 if selected_theme is None:
@@ -110,7 +114,7 @@ class Game:
                 
                 print(f"[Game] Selected theme: {selected_theme}")
                 
-                # 3. LOAD ASSETS (NOW loads food_bg.png, etc.)
+                # 3. LOAD THEME-SPECIFIC ASSETS
                 try:
                     self.theme_manager = ThemeManager(selected_theme)
                     self.assets = AssetManager(selected_theme).load_all()
@@ -128,7 +132,6 @@ class Game:
                     use_cv=self.use_cv
                 )
                 
-                # THIS RUNS THE ACTUAL GAME
                 game_result = game_loop.run()
                 
                 if not game_result['continue']:
@@ -149,10 +152,10 @@ class Game:
                 
                 if retry:
                     print("[Game] Player chose retry - going to wheel")
-                    continue  # Go back to wheel
+                    continue
                 else:
                     print("[Game] Player chose menu - going to start")
-                    continue  # Go back to start screen
+                    continue
                     
         finally:
             self.cleanup()
