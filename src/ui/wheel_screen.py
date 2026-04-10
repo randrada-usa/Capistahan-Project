@@ -219,17 +219,21 @@ class WheelScreen:
         else:
             screen.fill((20, 20, 30))
         
-        overlay_alpha = int(180 * self.pop_progress) if self.state == self.STATE_POPPING else 180
+        # SMOOTH TRANSITION: End at same alpha as spinning state
+        # Lerp from 0 to target (120) during pop animation
+        target_alpha = 120
+        if self.state == self.STATE_POPPING:
+            overlay_alpha = int(target_alpha * self.pop_progress)
+        else:
+            overlay_alpha = target_alpha
+        
         overlay = pygame.Surface((self.screen_width, self.screen_height), pygame.SRCALPHA)
         overlay.fill((0, 0, 0))
         overlay.set_alpha(overlay_alpha)
         screen.blit(overlay, (0, 0))
         
         title = self.font_large.render("SPIN THE WHEEL!", True, (255, 215, 0))
-        screen.blit(title, title.get_rect(center=(self.center_x, 100)))
-        
-        subtitle = self.font_small.render("Discover Capiztahan's treasures...", True, (220, 220, 200))
-        screen.blit(subtitle, subtitle.get_rect(center=(self.center_x, 170)))
+        screen.blit(title, title.get_rect(center=(self.center_x, 170)))
         
         self._draw_wheel(screen)
         self._draw_pointer(screen)

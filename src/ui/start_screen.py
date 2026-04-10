@@ -2,7 +2,7 @@ import pygame
 import cv2
 import os
 import random
-from src.game.falling_objects import FallingItem, Rarity  # ADD Rarity import
+from src.game.falling_objects import FallingItem, Rarity
 from src.game.asset_manager import AssetManager 
 
 def fade(screen, width, height, fade_in=True, speed=5):
@@ -45,7 +45,6 @@ class UIFallingManager:
         x = random.randint(60, self.screen_width - 60)
         item_type = 'good' if random.random() < 0.7 else 'bad'
         speed = random.uniform(2, 4)
-        # FIXED: Added Rarity.COMMON as the third argument
         self.items.append(FallingItem(x, item_type, Rarity.COMMON, speed, self.assets))
 
     def update(self, dt):
@@ -72,13 +71,11 @@ class StartScreen:
         self.screen_height = screen_height
         self.font_prototype = pygame.font.Font(None, 36)
 
-        # 1. Load Assets via AssetManager
         manager = AssetManager().load_all()
         self.assets_dict = manager.assets
         self.sounds = manager.sounds
         self.music_paths = manager.music_paths
 
-        # 2. Start Menu Music
         if not pygame.mixer.music.get_busy(): 
             try:
                 pygame.mixer.music.load(self.music_paths['menu'])
@@ -86,24 +83,20 @@ class StartScreen:
             except Exception as e:
                 print(f"Error playing menu music: {e}")
 
-        # 3. Layout Configuration
         self.background = self.assets_dict.get('background')
         self.title_img = self.assets_dict.get('title2')
         self.start_button = self.assets_dict.get('start_button')
         
-        # --- ADJUST BUTTON SIZE ---
         if self.start_button:
             orig_w, orig_h = self.start_button.get_size()
-            # Changed from 0.8 to 0.4 to make it significantly smaller
             self.button_scale = 0.4 
             self.start_button = pygame.transform.smoothscale(
                 self.start_button, 
                 (int(orig_w * self.button_scale), int(orig_h * self.button_scale))
             )
 
-        # --- ADJUST POSITIONING ---
-        padding = 10  # Reduced space between title and button
-        vertical_offset = -100 # Moves the entire group (Title + Button) up
+        padding = 10
+        vertical_offset = -100
         
         title_h = self.title_img.get_height() if self.title_img else 200
         btn_h = self.start_button.get_height() if self.start_button else 150
@@ -111,25 +104,21 @@ class StartScreen:
         total_group_height = title_h + padding + btn_h
         group_start_y = ((self.screen_height - total_group_height) // 2) + vertical_offset
 
-        # Title Rect
         if self.title_img:
             self.title_rect = self.title_img.get_rect(center=(self.screen_width // 2, group_start_y + title_h // 2))
         
-        # Button Rect (Positioned closer below title)
         if self.start_button:
             self.button_rect = self.start_button.get_rect(center=(self.screen_width // 2, self.title_rect.bottom + padding + btn_h // 2))
         else:
             self.button_rect = pygame.Rect(self.screen_width//2 - 100, group_start_y + title_h + padding, 200, 75)
 
-        # --- ADJUST PROTOTYPE TEXT POSITION ---
-        # Moving it higher up from the bottom (e.g., 120 pixels from bottom)
         self.prototype_y = self.screen_height - 120
-
         self.button_hovering = False
         self.falling = UIFallingManager(screen_width, screen_height, self.assets_dict)
+        self.font_hints = pygame.font.Font(None, 48)
         
-        # --- KEYBOARD HINTS SETUP ---
-        self.font_hints = pygame.font.Font(None, 48)  # Slightly larger font for hints
+        # Store snapshot before fade
+        self.snapshot = None
 
     def handle_event(self, event):
         """Returns 'start' if game should start, 'quit' to exit, None otherwise."""
@@ -162,23 +151,18 @@ class StartScreen:
         return bordered_surface
 
     def render(self, screen):
-        # 1. Background
         if self.background:
             screen.blit(self.background, (0, 0))
         else:
             screen.fill((235, 220, 207))
             
-        # 2. Decorative Falling Items
         self.falling.render(screen)
         
-        # 3. Draw Title
         if self.title_img:
             screen.blit(self.title_img, self.title_rect)
 
-        # 4. Draw Start Button (with hover effect)
         if self.start_button:
             if self.button_hovering:
-                # Hover scale is relative to the already scaled button
                 hover_scale = 1.05
                 orig_w, orig_h = self.start_button.get_size()
                 scaled_button = pygame.transform.smoothscale(self.start_button, (int(orig_w * hover_scale), int(orig_h * hover_scale)))
@@ -186,18 +170,20 @@ class StartScreen:
             else:
                 screen.blit(self.start_button, self.button_rect)
         
-        # 5. Draw Credits
         prototype_text = self._render_text_with_border("PROTOTYPE by: GAMEFRICKS", self.font_prototype, (255, 255, 255), (0, 0, 0))
         screen.blit(prototype_text, prototype_text.get_rect(center=(self.screen_width // 2, self.prototype_y)))
         
-        # 6. Draw Keyboard Hints
         space_hint = self._render_text_with_border("Press 'SPACE' to Play", self.font_hints, (255, 255, 255), (0, 0, 0))
         esc_hint = self._render_text_with_border("Press 'ESC' to Quit", self.font_hints, (255, 255, 255), (0, 0, 0))
         
-        # Position hints below the button with some spacing
         hint_y_start = self.button_rect.bottom + 60
         screen.blit(space_hint, space_hint.get_rect(center=(self.screen_width // 2, hint_y_start)))
         screen.blit(esc_hint, esc_hint.get_rect(center=(self.screen_width // 2, hint_y_start + 50)))
+
+    def capture_snapshot(self, screen):
+        """Capture current screen state before fade."""
+        self.snapshot = screen.copy()
+        return self.snapshot
 
 def show_start_screen(screen, screen_width=1920, screen_height=1080, gesture_controller=None):
     """Main loop for the Start Screen with persistent camera feed."""
@@ -207,28 +193,30 @@ def show_start_screen(screen, screen_width=1920, screen_height=1080, gesture_con
     while True:
         dt = clock.tick(60) / 1000
         
-        # Handle Pygame events
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
-                return False
+                return False, None
             
             action = start_screen.handle_event(event)
             if action == 'start':
+                # CAPTURE SCREEN BEFORE ANYTHING ELSE
+                snapshot = start_screen.capture_snapshot(screen)
                 pygame.mixer.music.fadeout(1000)
-                fade(screen, screen_width, screen_height, fade_in=False)
-                return True
+                # REMOVED: fade(screen, screen_width, screen_height, fade_in=False)
+                # Let the wheel handle all visual transition
+                return True, snapshot
             elif action == 'quit':
-                return False
+                # Keep fade for quit to black out before exit
+                fade(screen, screen_width, screen_height, fade_in=False)
+                return False, None
         
-        # UPDATE CAMERA FEED - Keep the CV window live during menu!
         if gesture_controller:
-            gesture_controller.update()  # Process frame
+            gesture_controller.update()
             debug_frame = gesture_controller.get_debug_frame()
             if debug_frame is not None:
                 cv2.imshow("GAMEFRICKS PROTOTYPE01 - Camera Feed", debug_frame)
-                cv2.waitKey(1)  # Required for OpenCV window to process events
+                cv2.waitKey(1)
         
-        # Update and render UI
         start_screen.falling.update(dt)
         start_screen.render(screen)
         pygame.display.flip()

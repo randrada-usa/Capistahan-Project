@@ -41,7 +41,6 @@ class Game:
         pygame.display.set_caption("CAPIZTAHAN GACHA - 6byte Studios")
         self.clock = pygame.time.Clock()
         
-        # Icon
         icon_path = os.path.join(os.path.dirname(__file__), 'Icon.ico')
         if os.path.exists(icon_path):
             try:
@@ -51,7 +50,6 @@ class Game:
                 print(f"[WARNING] Failed to load icon: {e}")
 
         print("Loading assets...")
-        # Initialize with default theme
         self.assets = AssetManager(theme='food').load_all()
         
         self.gesture_controller = None
@@ -63,11 +61,7 @@ class Game:
         
         self.hand_lost_timer = 0
         self.running = True
-        
-        # Track selected category
         self.current_category = None
-        
-        # Camera profile selection
         self.camera_profile = os.environ.get('CAMERA_PROFILE', 'high_angle')
         print(f"[Game] Camera profile: {self.camera_profile}")
 
@@ -77,23 +71,15 @@ class Game:
         self.init_cv()
 
     def reset_game(self, category=None):
-        """
-        Reset game state for new game round, optionally switching theme.
-        """
-        # Game timing
         self.game_duration = 60.0
         self.time_remaining = self.game_duration
         
-        # THEME SWITCHING based on wheel category
         if category and category != self.assets.get_theme_manager().get_theme():
             print(f"[Game] Switching theme to: {category}")
             self.assets.change_theme(category)
             self.current_category = category
         
-        # Create ThemeManager for Gio's systems
         theme_manager = self.assets.get_theme_manager()
-        
-        # Reset game components
         self.player = Player(self.screen_w, self.screen_h, self.assets)
         
         self.object_manager = ObjectManager(
@@ -109,11 +95,9 @@ class Game:
         
         self.hand_lost_timer = 0
         
-        # Reset gesture controller state (don't reinitialize camera)
         if self.gesture_controller:
             self.gesture_controller.reset()
         
-        # Music
         theme_music = self.assets.music_paths.get('ingame')
         if theme_music and os.path.exists(theme_music):
             try:
@@ -123,7 +107,6 @@ class Game:
                 print(f"[WARNING] Could not play ingame music: {e}")
 
     def init_cv(self):
-        """Initialize Gesture Controller with selected profile."""
         if CV_AVAILABLE and not self.gesture_controller:
             try:
                 self.gesture_controller = GestureController(
@@ -138,7 +121,6 @@ class Game:
                 self.use_cv = False
 
     def handle_events(self):
-        """Standard event handling"""
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 self.running = False
@@ -156,11 +138,9 @@ class Game:
         return True
 
     def update(self, dt):
-        """Update game logic, physics, CV input, and timer."""
         if self.game_state.game_over:
             return None, None
         
-        # FIXED: Use actual dt instead of fixed 1/60
         self.time_remaining -= dt
         if self.time_remaining <= 0:
             self.time_remaining = 0
@@ -176,31 +156,18 @@ class Game:
         else:
             player_x, _ = pygame.mouse.get_pos()
 
-        # Update player
         self.player.set_target_x(player_x)
-        self.player.update(dt)  # FIXED: Pass actual dt instead of 1/60
-        
-        # Update objects
-        self.object_manager.update(dt, self.game_state.score)  # FIXED: Pass actual dt
-        
-        # Collisions
+        self.player.update(dt)
+        self.object_manager.update(dt, self.game_state.score)
         caught, missed_good = self.object_manager.check_collisions(self.player.get_hitbox())
-        
-        # Update game state
         self.game_state.handle_caught(caught)
         self.game_state.handle_missed_good(missed_good)
         self.game_state.check_game_over()
-        
-        # Process events for Jen's expressions
         self._process_jen_events()
         
         return player_x, self.player.y
     
     def _process_jen_events(self):
-        """
-        Bridge Gio's game_state events to Jen's player expressions.
-        Call this every frame.
-        """
         events = self.game_state.get_events_for_jen()
         
         if events.get('ultra_rare_caught'):
@@ -210,11 +177,9 @@ class Game:
         elif events.get('missed'):
             self.player.set_expression('sad', duration=0.5)
         
-        # Clear events
         self.game_state.consume_events()
 
     def render(self, player_x, player_y):
-        """Render game"""
         bg = self.assets.get('background')
         if bg:
             self.screen.blit(bg, (0, 0))
@@ -231,7 +196,6 @@ class Game:
         
         self._draw_hud()
 
-        # Borders
         BORDER_WIDTH = 195
         border_color = (40, 20, 10)
         pygame.draw.rect(self.screen, border_color, (0, 0, BORDER_WIDTH, self.screen_h))
@@ -241,7 +205,6 @@ class Game:
         self._update_cv_window()
 
     def _update_cv_window(self):
-        """Update the OpenCV debug window."""
         if self.debug_window and self.use_cv and self.gesture_controller:
             debug_frame = self.gesture_controller.get_debug_frame()
             if debug_frame is not None:
@@ -249,7 +212,6 @@ class Game:
                 cv2.waitKey(1)
 
     def _draw_hud(self):
-        """Draws Score, Timer, High Score, and Heart."""
         score_text = self.font_large.render(f"Score: {self.game_state.score}", True, (255, 255, 255))
         self.screen.blit(score_text, (self.screen_w - 550, 80))
         
@@ -266,7 +228,6 @@ class Game:
         if health_sprite:
             self.screen.blit(health_sprite, (230, 80))
 
-        # Category indicator
         if self.current_category:
             cat_text = self.font_small.render(f"Theme: {self.current_category.upper()}", True, (255, 215, 0))
             self.screen.blit(cat_text, (230, 150))
@@ -277,34 +238,32 @@ class Game:
                 self.screen.blit(warning, warning.get_rect(center=(self.screen_w // 2, 150)))
 
     def run(self):
-        """Main execution flow."""
         try:
             while self.running:
-                # Start Screen
-                if not show_start_screen(
+                # Start Screen - now returns tuple (should_continue, snapshot)
+                result, start_screen_snapshot = show_start_screen(
                     self.screen,
                     self.screen_w,
                     self.screen_h,
                     gesture_controller=self.gesture_controller if self.use_cv else None
-                ):
+                )
+
+                if not result:
                     self.running = False
                     break
 
-                # CAPTURE START SCREEN FOR MODAL BACKGROUND
-                start_screen_snapshot = self.screen.copy()
-
-                # WHEEL SCREEN - Category selection (with pop-out effect)
+                # WHEEL SCREEN - Category selection with captured background
                 selected_category = show_wheel_screen(
                     self.screen,
                     self.screen_w,
                     self.screen_h,
                     gesture_controller=self.gesture_controller if self.use_cv else None,
                     assets=self.assets,
-                    background=start_screen_snapshot  # NEW
+                    background=start_screen_snapshot  # Now properly captured before fade
                 )
 
                 if selected_category is None:
-                    continue  # Back to start screen
+                    continue
 
                 print(f"[Game] Selected category: {selected_category}")
 
@@ -345,7 +304,6 @@ class Game:
             self.cleanup()
 
     def cleanup(self):
-        """Shutdown"""
         if self.gesture_controller:
             self.gesture_controller.stop()
         cv2.destroyAllWindows()
