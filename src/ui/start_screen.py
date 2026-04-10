@@ -71,13 +71,11 @@ class StartScreen:
         self.screen_height = screen_height
         self.font_prototype = pygame.font.Font(None, 36)
 
-        # 1. Load Assets via AssetManager
         manager = AssetManager().load_all()
         self.assets_dict = manager.assets
         self.sounds = manager.sounds
         self.music_paths = manager.music_paths
 
-        # 2. Start Menu Music
         if not pygame.mixer.music.get_busy(): 
             try:
                 pygame.mixer.music.load(self.music_paths['menu'])
@@ -85,13 +83,10 @@ class StartScreen:
             except Exception as e:
                 print(f"Error playing menu music: {e}")
 
-        # 3. BACKGROUND - Use generic background.png from assets/backgrounds/
-        self.background = self._load_start_background()
-        
+        self.background = self.assets_dict.get('background')
         self.title_img = self.assets_dict.get('title2')
         self.start_button = self.assets_dict.get('start_button')
         
-        # --- ADJUST BUTTON SIZE ---
         if self.start_button:
             orig_w, orig_h = self.start_button.get_size()
             self.button_scale = 0.4 
@@ -100,7 +95,6 @@ class StartScreen:
                 (int(orig_w * self.button_scale), int(orig_h * self.button_scale))
             )
 
-        # --- ADJUST POSITIONING ---
         padding = 10
         vertical_offset = -100
         
@@ -110,11 +104,9 @@ class StartScreen:
         total_group_height = title_h + padding + btn_h
         group_start_y = ((self.screen_height - total_group_height) // 2) + vertical_offset
 
-        # Title Rect
         if self.title_img:
             self.title_rect = self.title_img.get_rect(center=(self.screen_width // 2, group_start_y + title_h // 2))
         
-        # Button Rect
         if self.start_button:
             self.button_rect = self.start_button.get_rect(center=(self.screen_width // 2, self.title_rect.bottom + padding + btn_h // 2))
         else:
@@ -124,30 +116,9 @@ class StartScreen:
         self.button_hovering = False
         self.falling = UIFallingManager(screen_width, screen_height, self.assets_dict)
         self.font_hints = pygame.font.Font(None, 48)
-    
-    def _load_start_background(self):
-        """
-        Load the generic start screen background from assets/backgrounds/background.png
-        """
-        try:
-            import sys
-            if getattr(sys, 'frozen', False):
-                base_path = sys._MEIPASS
-            else:
-                base_path = os.path.abspath(".")
-            
-            bg_path = os.path.join(base_path, "assets", "backgrounds", "background.png")
-            
-            if os.path.exists(bg_path):
-                print(f"[StartScreen] Loading background: {bg_path}")
-                bg = pygame.image.load(bg_path).convert()
-                return pygame.transform.smoothscale(bg, (1920, 1080))
-            else:
-                print(f"[StartScreen] Background not found at {bg_path}, using fallback")
-                return None
-        except Exception as e:
-            print(f"[StartScreen] Error loading background: {e}")
-            return None
+        
+        # Store snapshot before fade
+        self.snapshot = None
 
     def handle_event(self, event):
         """Returns 'start' if game should start, 'quit' to exit, None otherwise."""
@@ -156,21 +127,24 @@ class StartScreen:
 
         if event.type == pygame.KEYDOWN:
             if event.key in (pygame.K_RETURN, pygame.K_SPACE):
-                if 'click' in self.sounds: 
-                    if self.sounds['click']:
-                        self.sounds['click'].play()
+                if 'click' in self.sounds and self.sounds['click']:
+                    self.sounds['click'].play()
                 return 'start'
             if event.key == pygame.K_ESCAPE:
                 return 'quit'
 
         if event.type == pygame.MOUSEBUTTONDOWN:
             if self.button_rect.collidepoint(event.pos):
-                if 'click' in self.sounds: 
-                    if self.sounds['click']:
-                        self.sounds['click'].play()
+                if 'click' in self.sounds and self.sounds['click']:
+                    self.sounds['click'].play()
                 return 'start'
         
         return None
+
+    def capture_snapshot(self, screen):
+        """Capture current screen state before fade."""
+        self.snapshot = screen.copy()
+        return self.snapshot
 
     def _render_text_with_border(self, text, font, text_color, border_color, border_width=2):
         text_surface = font.render(text, True, text_color)
@@ -184,20 +158,16 @@ class StartScreen:
         return bordered_surface
 
     def render(self, screen):
-        # 1. BACKGROUND
         if self.background:
             screen.blit(self.background, (0, 0))
         else:
             screen.fill((235, 220, 207))
             
-        # 2. Decorative Falling Items
         self.falling.render(screen)
         
-        # 3. Draw Title
         if self.title_img:
             screen.blit(self.title_img, self.title_rect)
 
-        # 4. Draw Start Button (with hover effect)
         if self.start_button:
             if self.button_hovering:
                 hover_scale = 1.05
@@ -207,11 +177,9 @@ class StartScreen:
             else:
                 screen.blit(self.start_button, self.button_rect)
         
-        # 5. Draw Credits
         prototype_text = self._render_text_with_border("PROTOTYPE by: GAMEFRICKS", self.font_prototype, (255, 255, 255), (0, 0, 0))
         screen.blit(prototype_text, prototype_text.get_rect(center=(self.screen_width // 2, self.prototype_y)))
         
-        # 6. Draw Keyboard Hints
         space_hint = self._render_text_with_border("Press 'SPACE' to Play", self.font_hints, (255, 255, 255), (0, 0, 0))
         esc_hint = self._render_text_with_border("Press 'ESC' to Quit", self.font_hints, (255, 255, 255), (0, 0, 0))
         
@@ -219,54 +187,39 @@ class StartScreen:
         screen.blit(space_hint, space_hint.get_rect(center=(self.screen_width // 2, hint_y_start)))
         screen.blit(esc_hint, esc_hint.get_rect(center=(self.screen_width // 2, hint_y_start + 50)))
 
-
-# Shared window name — must match game_loop.py's _cv_window_name
-_CV_WINDOW_NAME = "CAPIZTAHAN - Camera Feed"
-
-
 def show_start_screen(screen, screen_width=1920, screen_height=1080, gesture_controller=None):
     """Main loop for the Start Screen."""
     clock = pygame.time.Clock()
     start_screen = StartScreen(screen_width, screen_height)
-    cv_window_created = False
 
     while True:
         dt = clock.tick(60) / 1000
         
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
-                # Clean up CV window before quitting
-                if cv_window_created:
-                    cv2.destroyWindow(_CV_WINDOW_NAME)
-                return False
+                return False, None
             
             action = start_screen.handle_event(event)
             if action == 'start':
+                # CAPTURE SCREEN BEFORE ANYTHING ELSE
+                snapshot = start_screen.capture_snapshot(screen)
                 pygame.mixer.music.fadeout(1000)
-                fade(screen, screen_width, screen_height, fade_in=False)
-                # FIX: Destroy the CV window BEFORE game_loop creates its own.
-                # Without this, both windows coexist because OpenCV tracks them
-                # by name — the old one stays alive as a zombie.
-                if cv_window_created:
-                    cv2.destroyWindow(_CV_WINDOW_NAME)
-                    cv2.waitKey(1)  # Let OpenCV process the destroy event
-                return True
+                # REMOVED: fade(screen, screen_width, screen_height, fade_in=False)
+                # Let the wheel handle all visual transition
+                return True, snapshot
             elif action == 'quit':
-                if cv_window_created:
-                    cv2.destroyWindow(_CV_WINDOW_NAME)
-                return False
+                # Keep fade for quit to black out before exit
+                fade(screen, screen_width, screen_height, fade_in=False)
+                return False, None
         
-        # UPDATE CAMERA FEED
+        # UPDATE CAMERA FEED - Keep the CV window live during menu!
         if gesture_controller:
             gesture_controller.update()
             debug_frame = gesture_controller.get_debug_frame()
             if debug_frame is not None:
-                if not cv_window_created:
-                    cv2.namedWindow(_CV_WINDOW_NAME, cv2.WINDOW_NORMAL)
-                    cv_window_created = True
-                cv2.imshow(_CV_WINDOW_NAME, debug_frame)
-            cv2.waitKey(1)
-
+                cv2.imshow("GAMEFRICKS PROTOTYPE01 - Camera Feed", debug_frame)
+                cv2.waitKey(1)
+        
         # Update and render UI
         start_screen.falling.update(dt)
         start_screen.render(screen)

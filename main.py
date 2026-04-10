@@ -36,17 +36,24 @@ class Game:
         self.screen = pygame.display.set_mode((self.screen_w, self.screen_h))
         pygame.display.set_caption("CAPIZTAHAN GACHA - 6-byte Studios")
         
-        # Icon
         icon_path = os.path.join(os.path.dirname(__file__), 'Icon.ico')
         if os.path.exists(icon_path):
             try:
-                pygame.display.set_icon(pygame.image.load(icon_path))
-            except:
-                pass
-        
+                icon_surface = pygame.image.load(icon_path)
+                pygame.display.set_icon(icon_surface)
+            except Exception as e:
+                print(f"[WARNING] Failed to load icon: {e}")
+
         # CV setup
         self.gesture_controller = None
         self.use_cv = False
+        self.debug_window = True
+        self.camera_profile = os.environ.get('CAMERA_PROFILE', 'high_angle')
+        print(f"[Game] Camera profile: {self.camera_profile}")
+
+        if CV_AVAILABLE:
+            cv2.namedWindow("GAMEFRICKS PROTOTYPE01 - Camera Feed", cv2.WINDOW_NORMAL)
+            
         self.init_cv()
         
         # Pre-load shared UI assets (wheel icons, etc.) once at startup
@@ -60,34 +67,38 @@ class Game:
         # Theme/Assets set after wheel
         self.theme_manager = None
         self.assets = None
+        self.running = True
     
     def init_cv(self):
         """Initialize Gesture Controller."""
         if CV_AVAILABLE:
             try:
                 self.gesture_controller = GestureController(
-                    camera_profile='front'
+                    camera_profile=self.camera_profile
                 ).start()
                 self.use_cv = True
-                print("[Game] CV mode active")
+                print(f"[Game] CV active with '{self.camera_profile}' profile")
             except Exception as e:
                 print(f"[Game] CV failed: {e}")
+                import traceback
+                traceback.print_exc()
                 self.use_cv = False
-    
+
     def run(self):
         """Main game flow."""
         try:
-            while True:
-                # ==============================
+            while self.running:
                 # 1. START SCREEN
                 # ==============================
                 print("[Game] Showing start screen...")
-                if not show_start_screen(
+                result, start_screen_snapshot = show_start_screen(
                     self.screen, 
                     self.screen_w, 
                     self.screen_h,
                     gesture_controller=self.gesture_controller if self.use_cv else None
-                ):
+                )
+                
+                if not result:
                     print("[Game] User quit from start screen")
                     break
 
@@ -103,8 +114,8 @@ class Game:
                     self.screen_w,
                     self.screen_h,
                     gesture_controller=self.gesture_controller if self.use_cv else None,
-                    assets=self.pre_assets,   # ← perla icons now visible
-                    background=start_screen_snapshot
+                    assets=None,  # No assets yet, wheel uses its own
+                    background=start_screen_snapshot  # Captured start screen behind wheel
                 )
                 
                 if selected_theme is None:
