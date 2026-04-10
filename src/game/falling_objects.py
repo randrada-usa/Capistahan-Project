@@ -4,14 +4,14 @@ from enum import Enum
 
 
 class Rarity(Enum):
-    VERY_COMMON = "very_common"  # Dynamite
-    COMMON = "common"            # Puto
-    RARE = "rare"                # Isaw
-    ULTRA_RARE = "ultra_rare"    # Stick-O
+    VERY_COMMON = "very_common"  # 5 pts
+    COMMON = "common"            # 10 pts
+    RARE = "rare"                # 25 pts
+    ULTRA_RARE = "ultra_rare"    # 50 pts
 
 
 class FallingItem:
-    """Falling item with proper asset keys for food theme."""
+    """Falling item with category-specific PNG assets for Capiztahan."""
     
     SCORE_TABLE = {
         Rarity.VERY_COMMON: 5,
@@ -20,20 +20,20 @@ class FallingItem:
         Rarity.ULTRA_RARE: 50
     }
     
-    # Map rarities to glow sprite keys
+    # Map rarities to glow sprite keys (from assets/effects/)
     GLOW_SPRITES = {
         Rarity.COMMON: 'common_glow',
         Rarity.RARE: 'rare_glow',
-        Rarity.ULTRA_RARE: 'ultrarare_glow'
-        # Very common (Dynamite) has no glow
+        Rarity.ULTRA_RARE: 'ultra_rare_glow'
+        # VERY_COMMON has no glow
     }
     
-    # Map rarities to SPECIFIC ITEM NAMES (exact asset keys)
-    ITEM_NAMES = {
-        Rarity.VERY_COMMON: 'Dynamite',
-        Rarity.COMMON: 'Puto',
-        Rarity.RARE: 'Isaw',
-        Rarity.ULTRA_RARE: 'Stick_O'
+    # Map rarities to asset key prefixes
+    RARITY_PREFIXES = {
+        Rarity.VERY_COMMON: 'ultracommon',
+        Rarity.COMMON: 'common',
+        Rarity.RARE: 'rare',
+        Rarity.ULTRA_RARE: 'ultrarare'
     }
     
     def __init__(self, x, item_type, rarity, speed, asset_manager=None, theme_manager=None):
@@ -44,17 +44,21 @@ class FallingItem:
         self.speed = speed
         self.assets = asset_manager
         
-        # Get theme
+        # Get theme category
         if theme_manager:
             self.category = theme_manager.get_theme()
         else:
             self.category = 'food'
         
-        # Set specific item name
+        # Generate asset key based on category and rarity
         if self.type == 'bad':
-            self.item_name = 'BadItem'
+            # bad_item_food, bad_item_culture, bad_item_people
+            self.item_key = f'bad_item_{self.category}'
         else:
-            self.item_name = self.ITEM_NAMES.get(rarity, 'Puto')
+            # Determine suffix: 'item' for food/culture, 'book' for people
+            suffix = 'book' if self.category == 'people' else 'item'
+            prefix = self.RARITY_PREFIXES[rarity]
+            self.item_key = f'{prefix}_{suffix}'
         
         # Visual properties
         self.radius = 30
@@ -75,9 +79,10 @@ class FallingItem:
         self.glow_rotation += self.glow_rotation_speed
     
     def render(self, screen):
-        """Draw glow behind, then item on top."""
+        """Draw glow behind, then item on top using PNG assets."""
         
-        # 1. Draw glow first (behind item) for rare/ultra-rare good items
+        # 1. Draw glow first (behind item) for common/rare/ultra-rare good items
+        # VERY_COMMON (ultracommon) has no glow
         if self.type == 'good' and self.rarity != Rarity.VERY_COMMON:
             glow_key = self.GLOW_SPRITES.get(self.rarity)
             if glow_key and self.assets:
@@ -95,12 +100,9 @@ class FallingItem:
                     glow_rect = scaled_glow.get_rect(center=(int(self.x), int(self.y)))
                     screen.blit(scaled_glow, glow_rect)
         
-        # 2. Draw the actual food item using EXACT asset key
+        # 2. Draw the actual item using the generated asset key
         if self.assets:
-            # AssetManager loads them as: 'Stick_O', 'Isaw', 'Puto', 'Dynamite', 'BadItem'
-            # (without the folder prefix since _load_themed handles that)
-            sprite_key = self.item_name
-            sprite = self.assets.get(sprite_key)
+            sprite = self.assets.get(self.item_key)
             
             if sprite:
                 # Rotate item independently
@@ -108,11 +110,10 @@ class FallingItem:
                 rect = rotated.get_rect(center=(int(self.x), int(self.y)))
                 screen.blit(rotated, rect)
             else:
-                # Only if asset truly missing - small error indicator
+                # Debug: show pink circle if asset missing
                 pygame.draw.circle(screen, (255, 0, 255), (int(self.x), int(self.y)), 10)
-                # Draw name for debugging
                 font = pygame.font.Font(None, 24)
-                text = font.render(self.item_name[:4], True, (255, 255, 255))
+                text = font.render(self.item_key[:6], True, (255, 255, 255))
                 screen.blit(text, (int(self.x) - 15, int(self.y) - 10))
     
     def is_off_screen(self, screen_height):
@@ -132,10 +133,10 @@ class ObjectManager:
     """Spawns and manages falling items."""
     
     RARITY_WEIGHTS = {
-        Rarity.VERY_COMMON: 0.35,  # Dynamite (35%)
-        Rarity.COMMON: 0.40,       # Puto (40%)
-        Rarity.RARE: 0.20,         # Isaw (20%)
-        Rarity.ULTRA_RARE: 0.05    # Stick-O (5%)
+        Rarity.VERY_COMMON: 0.35,  # 35%
+        Rarity.COMMON: 0.40,       # 40%
+        Rarity.RARE: 0.20,         # 20%
+        Rarity.ULTRA_RARE: 0.05    # 5%
     }
     
     MAX_VERY_COMMON_STREAK = 4
@@ -278,7 +279,6 @@ class ObjectManager:
                 caught.append(item)
                 self.items.remove(item)
 
-        # Return integer count, not list
         missed_good = self._missed_good_count
         self._missed_good_count = 0
         

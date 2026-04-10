@@ -58,63 +58,62 @@ class AssetManager:
         self._load_shared('title1', os.path.join("ui", "title1.png"))
         self._load_shared('title2', os.path.join("ui", "title2.png"))
         
+        # --- GLOBAL EFFECTS (Glows) ---
+        # Increased to 240x240 for high quality (source is 1275x1243)
+        self._load_shared('common_glow', os.path.join("effects", "common_glow.png"), (130, 130))
+        self._load_shared('rare_glow', os.path.join("effects", "rare_glow.png"), (130, 130))
+        self._load_shared('ultra_rare_glow', os.path.join("effects", "ultra_rare_glow.png"), (130, 130))
+        # Note: wish_glow skipped per instructions
+        
         # --- THEME-SPECIFIC BACKGROUNDS ---
-        self._load_themed('background', 
-            os.path.join("backgrounds", "background.png"), 
-            target_size=(1920, 1080))
+        if theme == 'food':
+            self._load_themed('background', os.path.join("background", "bg_food.png"), target_size=(1920, 1080))
+        elif theme == 'culture':
+            self._load_themed('background', os.path.join("background", "bg_culture.png"), target_size=(1920, 1080))
+        elif theme == 'people':
+            self._load_themed('background', os.path.join("background", "bg_people.png"), target_size=(1920, 1080))
+        
+        # --- THEME-SPECIFIC ITEMS ---
+        # Determine item suffix based on theme
+        if theme == 'people':
+            item_suffix = 'book'
+        else:
+            item_suffix = 'item'
+        
+        # Load good items: ultracommon, common, rare, ultrarare
+        # Increased to 200x200 for high quality (source is 1000x1000)
+        self._load_themed(f'ultracommon_{item_suffix}', 
+                         os.path.join("sprites", f"ultracommon_{item_suffix}.png"), 
+                         target_size=(110, 110))
+        self._load_themed(f'common_{item_suffix}', 
+                         os.path.join("sprites", f"common_{item_suffix}.png"), 
+                         target_size=(110, 110))
+        self._load_themed(f'rare_{item_suffix}', 
+                         os.path.join("sprites", f"rare_{item_suffix}.png"), 
+                         target_size=(110, 110))
+        self._load_themed(f'ultrarare_{item_suffix}', 
+                         os.path.join("sprites", f"ultrarare_{item_suffix}.png"), 
+                         target_size=(110, 110))
+        
+        # Load bad item (category-specific filename: bad_item_food.png, etc.)
+        self._load_themed(f'bad_item_{theme}', 
+                         os.path.join("sprites", f"bad_item_{theme}.png"), 
+                         target_size=(110, 110))
         
         # --- THEME-SPECIFIC PLAYER SPRITES ---
-        self._load_themed('sprite_idle',
-            os.path.join("sprites", "Sprite1.png"),
-            target_size=(190, 320))
-        self._load_themed('sprite_right',
-            os.path.join("sprites", "Sprite_right.png"),
-            target_size=(210, 340))
-        self._load_themed('sprite_left',
-            os.path.join("sprites", "Sprite_left.png"),
-            target_size=(210, 340))
+        self._load_themed('sprite_idle', os.path.join("sprites", "Sprite1.png"), target_size=(190, 320))
+        self._load_themed('sprite_right', os.path.join("sprites", "Sprite_right.png"), target_size=(210, 340))
+        self._load_themed('sprite_left', os.path.join("sprites", "Sprite_left.png"), target_size=(210, 340))
         
         # --- CORNER CHIBI ---
-        self._load_themed('corner_chibi',
-            os.path.join("sprites", "corner_chibi.png"),
-            target_size=(150, 150))
-
-        # --- THEME-SPECIFIC ITEMS ---
-        self._load_themed('good_item',
-            os.path.join("sprites", "Good item.png"),
-            target_size=(100, 100))
-        self._load_themed('bad_item',
-            os.path.join("sprites", "Bad item.png"), 
-            target_size=(100, 100))
+        self._load_themed('corner_chibi', os.path.join("sprites", "corner_chibi.png"), target_size=(150, 150))
 
         # --- HEALTH HEARTS ---
         for i in range(1, 7):
             self._load_shared(f'h{i}', os.path.join("sprites", f"H{i}.png"), target_size=(300, 100))
         
-        # === GLOW EFFECTS ===
-        self._load_shared('common_glow', os.path.join("sprites", "Common_glow.png"), (120, 120))
-        self._load_shared('rare_glow', os.path.join("sprites", "Rare_glow.png"), (120, 120))
-        self._load_shared('ultrarare_glow', os.path.join("sprites", "Ultrarare_glow.png"), (120, 120))
-        
-        # === PERLA ===
+        # === PERLA (Default only for now) ===
         self._load_shared('perla_default', os.path.join("sprites", "Perla (default).png"), (150, 150))
-        for expr in ['happy', 'excited', 'sad']:
-            try:
-                self._load_shared(f'perla_{expr}', os.path.join("sprites", f"Perla ({expr}).png"), (150, 150))
-            except:
-                pass
-        
-        # === FOOD ITEMS ===
-        food_items = {
-            'Stick_O': (100, 100),
-            'Isaw': (100, 100),
-            'Puto': (100, 100),
-            'Dynamite': (100, 100),
-            'BadItem': (100, 100)
-        }
-        
-        for item_name, size in food_items.items():
-            self._load_themed(item_name, f"{item_name}.png", target_size=size)
         
         # === AUDIO ===
         self._load_audio('click', os.path.join("audio", "Start (mp3cut.net).mp3"))
@@ -179,10 +178,11 @@ class AssetManager:
             self.sounds[sound_name] = None
     
     def _load_image_file(self, full_path, target_size=None):
-        """Load and scale image."""
+        """Load and scale image using smoothscale for high quality."""
         try:
             image = pygame.image.load(full_path).convert_alpha()
             if target_size:
+                # Use smoothscale for better quality when downscaling
                 image = pygame.transform.smoothscale(image, target_size)
             return image
         except Exception as e:
