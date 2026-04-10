@@ -48,7 +48,7 @@ class PerlaHUD:
         """Load perla sprites based on category."""
         # Map categories to their default sprite files
         default_sprites = {
-            'food': 'perla_food_default',  # assets\sprites\new_sprites\perla_(food,default).png
+            'food': 'perla_food',  # assets\sprites\new_sprites\perla_food.png
             'culture': 'perla_culture',    # assets\sprites\new_sprites\perla_culture.png  
             'people': 'perla_people'       # assets\sprites\new_sprites\perla_people.png
         }
