@@ -66,42 +66,35 @@ class EndScreen:
         self.screen_width = screen_width
         self.screen_height = screen_height
 
-        # Fonts
         self.font_score = pygame.font.Font(None, 74)
         self.font_high = pygame.font.Font(None, 48)
         self.font_prototype = pygame.font.Font(None, 36)
         self.font_hints = pygame.font.Font(None, 36)
         self.font_wish = pygame.font.Font(None, 60)
 
-        # Asset & Audio Initialization
         manager = AssetManager().load_all()
         self.assets_dict = manager.assets
         self.sounds = manager.sounds
         self.music_paths = manager.music_paths
 
-        # Button Setup
         self.button_scale = 0.5 
         
-        # Load and scale Retry Button
         self.retry_btn_img = self.assets_dict.get('retry_button')
         if self.retry_btn_img:
             r_w, r_h = self.retry_btn_img.get_size()
             self.retry_btn_img = pygame.transform.smoothscale(self.retry_btn_img, (int(r_w * self.button_scale), int(r_h * self.button_scale)))
 
-        # Load and scale Menu Button
         self.menu_btn_img = self.assets_dict.get('menu_button')
         if self.menu_btn_img:
             m_w, m_h = self.menu_btn_img.get_size()
             self.menu_btn_img = pygame.transform.smoothscale(self.menu_btn_img, (int(m_w * self.button_scale), int(m_h * self.button_scale)))
 
-        # Load Wish Button - scale to 0.6 (different from retry/menu)
         self.wish_btn_img = self.assets_dict.get('start_button')
         if self.wish_btn_img:
             w_w, w_h = self.wish_btn_img.get_size()
             self.wish_scale = 0.6
             self.wish_btn_img = pygame.transform.smoothscale(self.wish_btn_img, (int(w_w * self.wish_scale), int(w_h * self.wish_scale)))
 
-        # Positioning Buttons
         btn_w = self.retry_btn_img.get_width() if self.retry_btn_img else 200
         btn_h = self.retry_btn_img.get_height() if self.retry_btn_img else 100
         spacing = 40
@@ -113,12 +106,11 @@ class EndScreen:
         self.retry_rect = pygame.Rect(start_x, btn_y, btn_w, btn_h)
         self.menu_rect = pygame.Rect(start_x + btn_w + spacing, btn_y, btn_w, btn_h)
         
-        # FIXED: Wish button rect matches actual wish button image dimensions
         if self.wish_btn_img:
             wish_w = self.wish_btn_img.get_width()
             wish_h = self.wish_btn_img.get_height()
         else:
-            wish_w, wish_h = btn_w, btn_h  # fallback
+            wish_w, wish_h = btn_w, btn_h
         
         self.wish_rect = pygame.Rect(0, 0, wish_w, wish_h)
         self.wish_rect.centerx = self.screen_width // 2
@@ -135,12 +127,10 @@ class EndScreen:
         self.is_new_record = False
         self.overlay_alpha = 180 
         
-        # Wish system state
         self.wish_result = None
         self.showing_wish_modal = False
         self.game_state = None
 
-        # Ensure Menu Music is playing
         if not pygame.mixer.music.get_busy():
             try:
                 pygame.mixer.music.load(self.music_paths['menu'])
@@ -154,11 +144,9 @@ class EndScreen:
         self.is_new_record = is_new_record and (final_score > 0) and (final_score >= high_score)
 
     def set_game_state(self, game_state):
-        """Set game state to access wish system"""
         self.game_state = game_state
 
     def handle_event(self, event):
-        """Handle input events. Returns 'retry', 'menu', 'quit', or None."""
         if self.showing_wish_modal:
             if event.type == pygame.KEYDOWN or event.type == pygame.MOUSEBUTTONDOWN:
                 self.showing_wish_modal = False
@@ -192,7 +180,6 @@ class EndScreen:
         return None
 
     def _make_wish(self):
-        """Execute wish roll and show result"""
         if self.game_state:
             self.wish_result = self.game_state.resolve_wish()
             self.showing_wish_modal = True
@@ -209,7 +196,6 @@ class EndScreen:
         return bordered_surface
 
     def _draw_wish_modal(self, screen):
-        """Draw the wish result modal (Golden Ticket or Better Luck)"""
         if not self.wish_result:
             return
             
@@ -255,16 +241,12 @@ class EndScreen:
         screen.blit(continue_text, continue_text.get_rect(center=(self.screen_width // 2, box_y + box_h - 50)))
 
     def _draw_wish_button(self, screen, eligible):
-        """Draw the Make Wish button and progress bar"""
-        # Don't draw if showing modal
         if self.showing_wish_modal:
             return
         
-        # Get wish status for progress bar (always show progress)
         status = self.game_state.get_wish_status() if self.game_state else None
         
         if eligible:
-            # Draw the wish button
             btn_img = self.wish_btn_img
             if btn_img:
                 if self.wish_hovering:
@@ -273,28 +255,21 @@ class EndScreen:
                 else:
                     screen.blit(btn_img, self.wish_rect)
             
-            # Button text
             wish_text = self._render_text_with_border("MAKE A WISH!", self.font_high, (255, 215, 0), (0, 0, 0))
             screen.blit(wish_text, wish_text.get_rect(center=self.wish_rect.center))
         
-        # FIXED: Progress bar always shown when status available, not just when not eligible
         if status:
             bar_w = 300
             bar_h = 20
             bar_x = (self.screen_width - bar_w) // 2
             bar_y = self.wish_rect.bottom + 20
             
-            # Background
             pygame.draw.rect(screen, (100, 100, 100), (bar_x, bar_y, bar_w, bar_h), border_radius=10)
-            # Progress
             progress_w = int(bar_w * (status['progress_percent'] / 100))
-            # Gold if eligible, gray if not
             bar_color = (255, 215, 0) if eligible else (150, 150, 150)
             pygame.draw.rect(screen, bar_color, (bar_x, bar_y, progress_w, bar_h), border_radius=10)
-            # Border
             pygame.draw.rect(screen, (255, 255, 255), (bar_x, bar_y, bar_w, bar_h), 2, border_radius=10)
             
-            # Text
             progress_text = self.font_hints.render(f"{status['current']}/{status['threshold']} points", True, (255, 255, 255))
             screen.blit(progress_text, progress_text.get_rect(center=(self.screen_width // 2, bar_y + 40)))
 
@@ -323,7 +298,6 @@ class EndScreen:
             record_text = self._render_text_with_border("NEW RECORD!", self.font_high, (255, 215, 0), (0, 0, 0))
             screen.blit(record_text, record_text.get_rect(center=(center_x, score_y + 110)))
 
-        # Wish Button (with progress bar always visible)
         eligible = self.game_state.is_wish_eligible() if self.game_state else False
         self._draw_wish_button(screen, eligible)
 
