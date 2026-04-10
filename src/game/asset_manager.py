@@ -67,11 +67,11 @@ class AssetManager:
         
         # --- THEME-SPECIFIC BACKGROUNDS ---
         if theme == 'food':
-            self._load_themed('background', os.path.join("background", "bg_food.png"), target_size=(1920, 1080))
+            self._load_themed('background', os.path.join("background", "food_bg.png"), target_size=(1920, 1080))
         elif theme == 'culture':
             self._load_themed('background', os.path.join("background", "bg_culture.png"), target_size=(1920, 1080))
         elif theme == 'people':
-            self._load_themed('background', os.path.join("background", "bg_people.png"), target_size=(1920, 1080))
+            self._load_themed('background', os.path.join("background", "people_bg.png"), target_size=(1920, 1080))
         
         # --- THEME-SPECIFIC ITEMS ---
         # Determine item suffix based on theme
