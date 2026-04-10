@@ -83,7 +83,7 @@ class StartScreen:
             except Exception as e:
                 print(f"Error playing menu music: {e}")
 
-        self.background = self.assets_dict.get('background')
+        self.background = self.assets_dict.get('start_background')
         self.title_img = self.assets_dict.get('title2')
         self.start_button = self.assets_dict.get('start_button')
         
@@ -164,8 +164,9 @@ class StartScreen:
             
         self.falling.render(screen)
         
-        if self.title_img:
-            screen.blit(self.title_img, self.title_rect)
+        # Render title invis for now
+        #if self.title_img:
+        #    screen.blit(self.title_img, self.title_rect)
 
         if self.start_button:
             if self.button_hovering:

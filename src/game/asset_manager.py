@@ -65,7 +65,10 @@ class AssetManager:
         self._load_shared('ultra_rare_glow', os.path.join("effects", "ultra_rare_glow.png"), (130, 130))
         # Note: wish_glow skipped per instructions
         
-        # --- THEME-SPECIFIC BACKGROUNDS ---
+        # --- SHARED START/END SCREEN BACKGROUND ---
+        self._load_shared('start_background', os.path.join("backgrounds", "bg_logo.png"), target_size=(1920, 1080))
+        
+        # --- THEME-SPECIFIC GAMEPLAY BACKGROUNDS ---
         if theme == 'food':
             self._load_themed('background', os.path.join("background", "food_bg.png"), target_size=(1920, 1080))
         elif theme == 'culture':
