@@ -1,11 +1,12 @@
 """
 game_state.py - MODIFIED FOR CAPIZTAHAN
-Added: Event system for Jen's player expressions
-Keeps: Original score/lives management
+Removed: Health system
+Added: 90-second timer
 """
 
 import json
 import os
+import time  # CRITICAL: Added this import
 from datetime import datetime
 from enum import Enum
 
@@ -18,10 +19,13 @@ class GameState:
     HIGHSCORE_FILE = "highscore.json"
     MAX_HIGH_SCORES = 5
     
+    # Game duration: 1 minute 30 seconds
+    GAME_DURATION = 60  # seconds
+    
     # Wish system threshold
     WISH_THRESHOLD = 200
     
-    # Category multipliers (tune these based on difficulty)
+    # Category multipliers
     CATEGORY_MULTIPLIERS = {
         'food': 1.0,
         'culture': 1.2,
@@ -40,10 +44,13 @@ class GameState:
         
         self.multiplier = self.CATEGORY_MULTIPLIERS.get(self.category, 1.0)
         
-        # Core stats
+        # Core stats - removed lives, added timer
         self.score = 0
-        self.lives = 6
         self.game_over = False
+        
+        # Timer system
+        self.start_time = None
+        self.time_remaining = self.GAME_DURATION
         
         # Session tracking
         self.session_best_catch = None
@@ -52,7 +59,7 @@ class GameState:
             'common': 0,
             'rare': 0,
             'ultra_rare': 0
-    }
+        }
         
         # Events for Jen (cleared each frame)
         self.catch_events = {
@@ -72,6 +79,31 @@ class GameState:
         # High scores
         self.high_scores = self._load_high_scores()
         self.high_score = self.high_scores[0]['score'] if self.high_scores else 0
+    
+    def start_timer(self):
+        """Call this when gameplay actually starts."""
+        self.start_time = time.time()
+        print(f"[GameState] Timer started: {self.GAME_DURATION} seconds")
+    
+    def update_timer(self):
+        """Update remaining time. Call every frame."""
+        if self.start_time and not self.game_over:
+            elapsed = time.time() - self.start_time
+            self.time_remaining = max(0, self.GAME_DURATION - elapsed)
+            
+            if self.time_remaining <= 0:
+                print("[GameState] Time's up!")
+                self.trigger_game_over()
+    
+    def get_formatted_time(self):
+        """Return time as MM:SS string."""
+        minutes = int(self.time_remaining // 60)
+        seconds = int(self.time_remaining % 60)
+        return f"{minutes}:{seconds:02d}"
+    
+    def get_time_percentage(self):
+        """Return 0.0 to 1.0 for timer bar."""
+        return self.time_remaining / self.GAME_DURATION
     
     def _load_high_scores(self):
         try:
@@ -129,8 +161,8 @@ class GameState:
                 old_score = self.score
                 self.score += points
                 
-                # In handle_caught, update the tracking line:
-                rarity_key = item.rarity.value  # This now includes 'very_common'
+                # Update tracking
+                rarity_key = item.rarity.value
                 self.catches_by_rarity[rarity_key] += 1
                 
                 # Track best single catch
@@ -143,7 +175,7 @@ class GameState:
                         'total_points': points
                     }
                 
-                # Fire rarity events for Jen - compare Enum to Enum
+                # Fire rarity events for Jen
                 if item.rarity == Rarity.RARE:
                     self._trigger_event('rare_caught', {
                         'points': points,
@@ -163,7 +195,7 @@ class GameState:
                     if self.assets and 'good' in self.assets.sounds:
                         self.assets.sounds['good'].play()
                 
-                # FIXED: Milestone detection - check if we crossed any 50-point threshold
+                # FIXED: Milestone detection
                 old_milestone = old_score // 50
                 new_milestone = self.score // 50
                 if new_milestone > old_milestone and self.score > 0:
@@ -171,21 +203,17 @@ class GameState:
                     self._last_milestone = new_milestone * 50
                 
             else:
-                self.lives -= 1
+                # Bad items no longer reduce lives
                 if self.assets and 'bad' in self.assets.sounds:
                     self.assets.sounds['bad'].play()
     
     def handle_missed_good(self, count):
-        """Reduce lives when good items fall off screen."""
-        if count > 0:
-            self.lives -= count
-            if self.assets and 'minus_life' in self.assets.sounds:
-                self.assets.sounds['minus_life'].play()
+        """REMOVED: No longer reduces lives when good items fall off screen."""
+        pass  # Timer-based game, no penalty for missing items
     
     def check_game_over(self):
-        if self.lives <= 0 and not self.game_over:
-            self.game_over = True
-            self._add_high_score()
+        """Now checks time instead of lives."""
+        self.update_timer()
         return self.game_over
     
     def trigger_game_over(self):
@@ -235,13 +263,20 @@ class GameState:
             entry['is_new'] = False
         
         self.score = 0
-        self.lives = 6
         self.game_over = False
+        self.start_time = None
+        self.time_remaining = self.GAME_DURATION
         self.session_best_catch = None
-        self.catches_by_rarity = {'common': 0, 'rare': 0, 'ultra_rare': 0}
+        # FIXED: Added very_common to reset
+        self.catches_by_rarity = {
+            'very_common': 0,
+            'common': 0,
+            'rare': 0,
+            'ultra_rare': 0
+        }
         self.catch_events = {k: False for k in self.catch_events}
         self._event_queue.clear()
-        self._last_milestone = 0  # FIXED: Reset milestone tracker
+        self._last_milestone = 0
         
         # Re-initialize wish system for new category
         if self.theme_manager:
@@ -262,5 +297,6 @@ class GameState:
             'multiplier': self.multiplier,
             'catches': self.catches_by_rarity.copy(),
             'best_catch': self.session_best_catch,
-            'wish_status': self.get_wish_status()
+            'wish_status': self.get_wish_status(),
+            'time_remaining': self.get_formatted_time()
         }

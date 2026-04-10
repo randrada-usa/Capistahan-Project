@@ -279,7 +279,8 @@ class ObjectManager:
                 caught.append(item)
                 self.items.remove(item)
 
-        missed_good = self._missed_good_count
+        # REMOVED: No penalty for missed items in timer mode
+        # Just reset the counter for next frame
         self._missed_good_count = 0
         
-        return caught, missed_good
+        return caught, 0
