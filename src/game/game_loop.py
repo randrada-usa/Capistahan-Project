@@ -15,6 +15,9 @@ TIMER_OFFSET_X = 50  # Pixels from left/right edge
 TIMER_OFFSET_Y = 50  # Pixels from top/bottom edge
 # ==========================================
 
+# Consistent window name with other screens
+CV_WINDOW_NAME = "GAMEFRICKS PROTOTYPE01 - Camera Feed"
+
 
 class CornerChibi:
     """Perla character that reacts to catches."""
@@ -119,7 +122,8 @@ class CornerChibi:
 class GameLoop:
     """Main gameplay loop with NON-BLOCKING camera handling."""
     
-    def __init__(self, screen, assets, theme_manager, gesture_controller=None, use_cv=False):
+    def __init__(self, screen, assets, theme_manager, gesture_controller=None, 
+                 use_cv=False, scale_func=None):
         self.screen = screen
         self.assets = assets
         self.theme_manager = theme_manager
@@ -146,10 +150,10 @@ class GameLoop:
         self.font = pygame.font.Font(None, 74)
         self.small_font = pygame.font.Font(None, 36)
 
-        # Track whether we've created the OpenCV window ourselves
-        self._cv_window_name = "CAPIZTAHAN - Camera Feed"
+        # Use consistent window name with other screens
         self._cv_window_created = False
         
+        self.scale_func = scale_func if scale_func else lambda s: pygame.display.flip()        
         print(f"[GameLoop] Ready - Theme: {theme_manager.get_theme()}, CV: {self.use_cv}")
     
     def run(self):
@@ -166,14 +170,12 @@ class GameLoop:
             pygame.event.pump()
             
             if not self.handle_events():
-                self._close_cv_window()
                 return {'continue': False, 'game_state': None, 'snapshot': None}
             
             self.update(dt)
             self.render()
         
         print(f"[GameLoop] Game ended. Score: {self.game_state.score}")
-        self._close_cv_window()
         return {
             'continue': True,
             'game_state': self.game_state,
@@ -187,14 +189,22 @@ class GameLoop:
                 self.running = False
                 return False
             
+            # HANDLE RESIZE
+            if event.type == pygame.VIDEORESIZE:
+                pygame.display.set_mode((event.w, event.h), pygame.RESIZABLE)
+                continue
+            
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
                     self.running = False
                     return False
             
             if not self.use_cv and event.type == pygame.MOUSEMOTION:
-                mouse_x, _ = pygame.mouse.get_pos()
-                self.player.set_target_x(mouse_x)
+                # Use virtual mouse pos for player control too
+                from src.ui.start_screen import get_mouse_pos_virtual
+                virtual_pos = get_mouse_pos_virtual()
+                if virtual_pos:
+                    self.player.set_target_x(virtual_pos[0])
         
         return True
 
@@ -235,7 +245,7 @@ class GameLoop:
         self.corner_chibi.update(dt)
 
     def render(self):
-        """Render everything, then pump OpenCV exactly once per frame."""
+        """Render everything to virtual screen, then scale to actual."""
         # Background
         bg = self.assets.get('background')
         if bg:
@@ -248,25 +258,25 @@ class GameLoop:
         self.player.render(self.screen)
         self.corner_chibi.render(self.screen)
         
-        # HUD (removed health, added timer)
+        # HUD
         self._draw_hud()
         
-        # CRITICAL: Flip pygame display first so the game never stalls
-        pygame.display.flip()
+        # CRITICAL: Scale to actual display using provided function
+        self.scale_func(self.screen)
         
-        # Camera display
+        # Camera display - use consistent window name
         if self.use_cv:
             self._update_camera_display()
             try:
                 key = cv2.waitKey(1) & 0xFF
-                if key == 27:
+                if key == 27:  # ESC in CV window
                     pass
             except Exception as e:
                 print(f"[GameLoop] cv2.waitKey error: {e}")
                 self.use_cv = False
 
     def _update_camera_display(self):
-        """Push the latest debug frame to the single OpenCV window."""
+        """Push the latest debug frame to the camera window."""
         if not self.gesture_controller:
             return
         
@@ -274,24 +284,12 @@ class GameLoop:
             debug_frame = self.gesture_controller.get_debug_frame()
             
             if debug_frame is not None:
-                if not self._cv_window_created:
-                    cv2.namedWindow(self._cv_window_name, cv2.WINDOW_NORMAL)
-                    self._cv_window_created = True
-                
-                cv2.imshow(self._cv_window_name, debug_frame)
+                # Use the same window name as main.py and other screens
+                cv2.imshow(CV_WINDOW_NAME, debug_frame)
 
         except Exception as e:
             print(f"[GameLoop] Camera display error (disabling): {e}")
             self.use_cv = False
-
-    def _close_cv_window(self):
-        """Cleanly destroy the OpenCV window when the game exits."""
-        if self._cv_window_created:
-            try:
-                cv2.destroyWindow(self._cv_window_name)
-            except Exception:
-                pass
-            self._cv_window_created = False
 
     def _get_timer_position(self, timer_width, timer_height):
         """Calculate timer position based on TIMER_POSITION config."""
@@ -316,27 +314,23 @@ class GameLoop:
 
     def _draw_hud(self):
         """Draw HUD with Timer instead of Health."""
-        # Score (top-right)
+        # Score (top-right) - MOVED UP slightly to make room for hand lost
         score_text = self.font.render(f"Score: {self.game_state.score}", True, (255, 255, 255))
-        self.screen.blit(score_text, (self.screen_w - score_text.get_width() - 200, 100))
+        self.screen.blit(score_text, (self.screen_w - score_text.get_width() - 200, 80))
         
-        # Category
-        cat_text = self.small_font.render(
-            f"{self.theme_manager.get_theme_display_name()} (x{self.game_state.multiplier})", 
-            True, (255, 215, 0)
-        )
-        self.screen.blit(cat_text, (20, 285))
+        # REMOVED: Category/Theme indicator (Capiz Traditions 1.2x)
+        # REMOVED: Input mode indicator (HAND TRACKING/MOUSE MODE)
         
-        # TIMER DISPLAY - Bottom (configurable position)
+        # TIMER DISPLAY - Bottom
         self._draw_timer()
         
-        # Wish progress (moved up to make room for timer at bottom)
+        # Wish progress 
         if not self.game_state.is_wish_eligible():
             status = self.game_state.get_wish_status()
             bar_w = 300
             bar_h = 20
             bar_x = 20
-            bar_y = 340  # Moved up from 400
+            bar_y = 340
             
             pygame.draw.rect(self.screen, (100, 100, 100), 
                            (bar_x, bar_y, bar_w, bar_h), border_radius=10)
@@ -354,27 +348,21 @@ class GameLoop:
             self.screen.blit(progress_text, (bar_x, bar_y + 25))
         else:
             wish_text = self.small_font.render("★ WISH READY! ★", True, (255, 215, 0))
-            self.screen.blit(wish_text, (20, 340))  # Moved up from 400
+            self.screen.blit(wish_text, (20, 340))
         
-        # Input mode indicator
-        mode_color = (100, 255, 100) if self.use_cv else (255, 255, 100)
-        mode_text = "HAND TRACKING" if self.use_cv else "MOUSE MODE"
-        mode_surf = self.small_font.render(mode_text, True, mode_color)
-        self.screen.blit(mode_surf, (self.screen_w - mode_surf.get_width() - 20, 100))
-        
-        # Hand lost warning
+        # Hand lost warning - CENTERED AT TOP
         if self.hand_lost_timer > 0.1:
-            if (pygame.time.get_ticks() // 200) % 2 == 0:
+            if (pygame.time.get_ticks() // 200) % 2 == 0:  # Blink effect
                 warning = self.font.render("! HAND LOST !", True, (255, 50, 50))
-                rect = warning.get_rect(center=(self.screen_w // 200, 100))
+                rect = warning.get_rect(center=(self.screen_w // 2, 80))  # Center top
                 self.screen.blit(warning, rect)
     
     def _draw_timer(self):
         """Draw the game timer with visual bar."""
-        # Calculate dimensions
+        # INCREASED text_height from 40 to 55 to move number up
         bar_width = 300
         bar_height = 20
-        text_height = 40
+        text_height = 55  # Was 40, now 55 - moves number higher above bar
         
         # Get position based on config
         x, y = self._get_timer_position(bar_width, bar_height + text_height + 10)
@@ -402,7 +390,7 @@ class GameLoop:
         pygame.draw.rect(self.screen, (255, 255, 255), 
                         (x, y + text_height, bar_width, bar_height), 2, border_radius=10)
         
-        # Time text (above bar)
+        # Time text (above bar) - Now with more spacing due to text_height=55
         time_str = self.game_state.get_formatted_time()
         time_text = self.timer_font.render(time_str, True, (255, 255, 255))
         self.screen.blit(time_text, (x, y))

@@ -5,6 +5,37 @@ import random
 from src.game.falling_objects import FallingItem, Rarity
 from src.game.asset_manager import AssetManager 
 
+def get_mouse_pos_virtual():
+    """Convert actual window mouse pos to virtual 1920x1080 coordinates."""
+    actual_surface = pygame.display.get_surface()
+    if actual_surface is None:
+        return pygame.mouse.get_pos()
+    
+    actual_w, actual_h = actual_surface.get_size()
+    virtual_w, virtual_h = 1920, 1080
+    
+    # Calculate the same scaling as scale_and_flip
+    scale = min(actual_w / virtual_w, actual_h / virtual_h)
+    new_w = int(virtual_w * scale)
+    new_h = int(virtual_h * scale)
+    
+    # Calculate letterbox offset
+    offset_x = (actual_w - new_w) // 2
+    offset_y = (actual_h - new_h) // 2
+    
+    # Get actual mouse pos
+    mx, my = pygame.mouse.get_pos()
+    
+    # Check if mouse is in the black bars (outside game area)
+    if mx < offset_x or mx >= offset_x + new_w or my < offset_y or my >= offset_y + new_h:
+        return None  # Mouse is in black bars, not on game
+    
+    # Transform to virtual coordinates
+    virtual_x = int((mx - offset_x) / scale)
+    virtual_y = int((my - offset_y) / scale)
+    
+    return (virtual_x, virtual_y)
+
 def fade(screen, width, height, fade_in=True, speed=5):
     """Handles smooth transitions between screens."""
     fade_surface = pygame.Surface((width, height))
@@ -121,8 +152,14 @@ class StartScreen:
 
     def handle_event(self, event):
         """Returns 'start' if game should start, 'quit' to exit, None otherwise."""
+        # Get virtual mouse position for accurate hit detection
+        virtual_pos = get_mouse_pos_virtual()
+        
         if event.type == pygame.MOUSEMOTION:
-            self.button_hovering = self.button_rect.collidepoint(event.pos)
+            if virtual_pos:
+                self.button_hovering = self.button_rect.collidepoint(virtual_pos)
+            else:
+                self.button_hovering = False
 
         if event.type == pygame.KEYDOWN:
             if event.key in (pygame.K_RETURN, pygame.K_SPACE):
@@ -133,7 +170,7 @@ class StartScreen:
                 return 'quit'
 
         if event.type == pygame.MOUSEBUTTONDOWN:
-            if self.button_rect.collidepoint(event.pos):
+            if virtual_pos and self.button_rect.collidepoint(virtual_pos):
                 if 'click' in self.sounds and self.sounds['click']:
                     self.sounds['click'].play()
                 return 'start'
@@ -164,10 +201,6 @@ class StartScreen:
             
         self.falling.render(screen)
         
-        # Render title invis for now
-        #if self.title_img:
-        #    screen.blit(self.title_img, self.title_rect)
-
         if self.start_button:
             if self.button_hovering:
                 hover_scale = 1.05
@@ -187,10 +220,13 @@ class StartScreen:
         screen.blit(space_hint, space_hint.get_rect(center=(self.screen_width // 2, hint_y_start)))
         screen.blit(esc_hint, esc_hint.get_rect(center=(self.screen_width // 2, hint_y_start + 50)))
 
-def show_start_screen(screen, screen_width=1920, screen_height=1080, gesture_controller=None):
+def show_start_screen(screen, screen_width=1920, screen_height=1080, 
+                     gesture_controller=None, scale_func=None):
     """Main loop for the Start Screen."""
     clock = pygame.time.Clock()
     start_screen = StartScreen(screen_width, screen_height)
+    
+    do_flip = scale_func if scale_func else lambda s: pygame.display.flip()
 
     while True:
         dt = clock.tick(60) / 1000
@@ -199,16 +235,17 @@ def show_start_screen(screen, screen_width=1920, screen_height=1080, gesture_con
             if event.type == pygame.QUIT:
                 return False, None
             
+            # HANDLE RESIZE: Update display mode to get new surface
+            if event.type == pygame.VIDEORESIZE:
+                pygame.display.set_mode((event.w, event.h), pygame.RESIZABLE)
+                continue
+            
             action = start_screen.handle_event(event)
             if action == 'start':
-                # CAPTURE SCREEN BEFORE ANYTHING ELSE
                 snapshot = start_screen.capture_snapshot(screen)
                 pygame.mixer.music.fadeout(1000)
-                # No fade - let wheel handle transition
                 return True, snapshot
             elif action == 'quit':
-                # Fade for quit
-                fade(screen, screen_width, screen_height, fade_in=False)
                 return False, None
         
         # UPDATE CAMERA FEED
@@ -219,7 +256,9 @@ def show_start_screen(screen, screen_width=1920, screen_height=1080, gesture_con
                 cv2.imshow("GAMEFRICKS PROTOTYPE01 - Camera Feed", debug_frame)
                 cv2.waitKey(1)
         
-        # Update and render UI
+        # Update and render UI to virtual screen
         start_screen.falling.update(dt)
         start_screen.render(screen)
-        pygame.display.flip()
+        
+        # Scale to actual display and flip
+        do_flip(screen)

@@ -58,9 +58,7 @@ class ThemeManager:
             print(f"[ThemeManager] Invalid theme '{theme}', using default: {self.DEFAULT_THEME}")
             self._theme = self.DEFAULT_THEME
     
-    def get_theme(self):
-        """Return current theme string."""
-        return self._theme
+
     
     def resolve_path(self, relative_path, asset_name=None):
         """
@@ -93,11 +91,3 @@ class ThemeManager:
         """Check if an asset should vary by theme."""
         return asset_name in self.themed_assets
     
-    def get_theme_display_name(self):
-        """Return human-readable theme name for UI."""
-        names = {
-            'food': 'Capiz Cuisine',
-            'culture': 'Capiz Traditions', 
-            'people': 'Capiz Community'
-        }
-        return names.get(self._theme, 'Unknown')

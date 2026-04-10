@@ -6,6 +6,37 @@ from src.game.falling_objects import FallingItem, Rarity
 from src.game.asset_manager import AssetManager
 from src.game.wish_system import make_wish
 
+def get_mouse_pos_virtual():
+    """Convert actual window mouse pos to virtual 1920x1080 coordinates."""
+    actual_surface = pygame.display.get_surface()
+    if actual_surface is None:
+        return pygame.mouse.get_pos()
+    
+    actual_w, actual_h = actual_surface.get_size()
+    virtual_w, virtual_h = 1920, 1080
+    
+    # Calculate the same scaling as scale_and_flip
+    scale = min(actual_w / virtual_w, actual_h / virtual_h)
+    new_w = int(virtual_w * scale)
+    new_h = int(virtual_h * scale)
+    
+    # Calculate letterbox offset
+    offset_x = (actual_w - new_w) // 2
+    offset_y = (actual_h - new_h) // 2
+    
+    # Get actual mouse pos
+    mx, my = pygame.mouse.get_pos()
+    
+    # Check if mouse is in the black bars (outside game area)
+    if mx < offset_x or mx >= offset_x + new_w or my < offset_y or my >= offset_y + new_h:
+        return None  # Mouse is in black bars, not on game
+    
+    # Transform to virtual coordinates
+    virtual_x = int((mx - offset_x) / scale)
+    virtual_y = int((my - offset_y) / scale)
+    
+    return (virtual_x, virtual_y)
+
 class UIFallingManager:
     """Manages decorative falling items for the background."""
     def __init__(self, screen_width, screen_height, assets=None):
@@ -147,6 +178,9 @@ class EndScreen:
         self.game_state = game_state
 
     def handle_event(self, event):
+        # Get virtual mouse position for accurate hit detection
+        virtual_pos = get_mouse_pos_virtual()
+        
         if self.showing_wish_modal:
             if event.type == pygame.KEYDOWN or event.type == pygame.MOUSEBUTTONDOWN:
                 self.showing_wish_modal = False
@@ -154,9 +188,14 @@ class EndScreen:
             return None
 
         if event.type == pygame.MOUSEMOTION:
-            self.retry_hovering = self.retry_rect.collidepoint(event.pos)
-            self.menu_hovering = self.menu_rect.collidepoint(event.pos)
-            self.wish_hovering = self.wish_rect.collidepoint(event.pos)
+            if virtual_pos:
+                self.retry_hovering = self.retry_rect.collidepoint(virtual_pos)
+                self.menu_hovering = self.menu_rect.collidepoint(virtual_pos)
+                self.wish_hovering = self.wish_rect.collidepoint(virtual_pos)
+            else:
+                self.retry_hovering = False
+                self.menu_hovering = False
+                self.wish_hovering = False
 
         if event.type == pygame.KEYDOWN:
             if event.key in (pygame.K_RETURN, pygame.K_SPACE, pygame.K_r):
@@ -165,15 +204,15 @@ class EndScreen:
             if event.key == pygame.K_ESCAPE:
                 return "quit"
 
-        if event.type == pygame.MOUSEBUTTONDOWN:
-            if self.wish_rect.collidepoint(event.pos) and self.game_state and self.game_state.is_wish_eligible():
+        if event.type == pygame.MOUSEBUTTONDOWN and virtual_pos:
+            if self.wish_rect.collidepoint(virtual_pos) and self.game_state and self.game_state.is_wish_eligible():
                 if 'click' in self.sounds: self.sounds['click'].play()
                 self._make_wish()
                 return None
-            if self.retry_rect.collidepoint(event.pos):
+            if self.retry_rect.collidepoint(virtual_pos):
                 if 'click' in self.sounds: self.sounds['click'].play()
                 return "retry"
-            if self.menu_rect.collidepoint(event.pos):
+            if self.menu_rect.collidepoint(virtual_pos):
                 if 'click' in self.sounds: self.sounds['click'].play()
                 return "menu"
 
@@ -327,7 +366,7 @@ class EndScreen:
 
 def show_end_screen(screen, game_state, 
                     background_snapshot=None, screen_width=1920, screen_height=1080,
-                    gesture_controller=None):
+                    gesture_controller=None, scale_func=None):
     end_screen = EndScreen(screen_width, screen_height)
     
     final_score = game_state.score
@@ -338,6 +377,7 @@ def show_end_screen(screen, game_state,
     end_screen.set_game_state(game_state)
     
     clock = pygame.time.Clock()
+    do_flip = scale_func if scale_func else lambda s: pygame.display.flip()
     
     while True:
         dt = clock.tick(60) / 1000
@@ -346,16 +386,18 @@ def show_end_screen(screen, game_state,
             if event.type == pygame.QUIT:
                 pygame.quit(); exit()
             
+            # HANDLE RESIZE
+            if event.type == pygame.VIDEORESIZE:
+                pygame.display.set_mode((event.w, event.h), pygame.RESIZABLE)
+                continue
+            
             action = end_screen.handle_event(event)
             if action == "retry":
                 pygame.mixer.music.fadeout(1000) 
-                fade(screen, screen_width, screen_height, fade_in=False)
                 return True
             elif action == "menu":
-                fade(screen, screen_width, screen_height, fade_in=False)
                 return False
             elif action == "quit":
-                fade(screen, screen_width, screen_height, fade_in=False)
                 return False
         
         if gesture_controller:
@@ -367,4 +409,4 @@ def show_end_screen(screen, game_state,
         
         end_screen.falling.update(dt)
         end_screen.render(screen, background_snapshot)
-        pygame.display.flip()
+        do_flip(screen)
