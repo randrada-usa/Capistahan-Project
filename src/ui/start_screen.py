@@ -155,7 +155,26 @@ class StartScreen:
         self.background = self.assets_dict.get('start_background')
         self.title_img = self.assets_dict.get('title2')
         self.start_button = self.assets_dict.get('start_button')
-        
+
+        # ✅ LOAD COLLAB LOGOS
+        try:
+            self.logo_6byte = pygame.image.load("assets/ui/6BYTE3.png").convert_alpha()
+            self.logo_cgg = pygame.image.load("assets/ui/CGG.png").convert_alpha()
+            self.logo_capiz = pygame.image.load("assets/ui/CAPIZTAHAN2026.png").convert_alpha()
+        except Exception as e:
+            print(f"Error loading logos: {e}")
+            self.logo_6byte = None
+            self.logo_cgg = None
+            self.logo_capiz = None
+
+        # Optional scaling for logos
+        if self.logo_6byte:
+            self.logo_6byte = pygame.transform.smoothscale(self.logo_6byte, (150, 150))
+        if self.logo_cgg:
+            self.logo_cgg = pygame.transform.smoothscale(self.logo_cgg, (150, 150))
+        if self.logo_capiz:
+            self.logo_capiz = pygame.transform.smoothscale(self.logo_capiz, (381, 150))
+
         if self.start_button:
             orig_w, orig_h = self.start_button.get_size()
             self.button_scale = 0.4 
@@ -186,11 +205,12 @@ class StartScreen:
         self.falling = UIFallingManager(screen_width, screen_height, self.assets_dict)
         self.font_hints = pygame.font.Font(None, 48)
         
+        # ✅ FONT FOR "X"
+        self.font_x = pygame.font.Font(None, 72)
+
         self.snapshot = None
 
     def handle_event(self, event):
-        """Returns 'start' if game should start, 'quit' to exit, None otherwise."""
-        # Get virtual mouse position for accurate hit detection
         virtual_pos = get_mouse_pos_virtual()
         
         if event.type == pygame.MOUSEMOTION:
@@ -216,7 +236,6 @@ class StartScreen:
         return None
 
     def capture_snapshot(self, screen):
-        """Capture current screen state before fade."""
         self.snapshot = screen.copy()
         return self.snapshot
 
@@ -247,14 +266,40 @@ class StartScreen:
                 screen.blit(scaled_button, scaled_button.get_rect(center=self.button_rect.center))
             else:
                 screen.blit(self.start_button, self.button_rect)
-        
-        prototype_text = self._render_text_with_border("PROTOTYPE by: GAMEFRICKS", self.font_prototype, (255, 255, 255), (0, 0, 0))
-        screen.blit(prototype_text, prototype_text.get_rect(center=(self.screen_width // 2, self.prototype_y)))
-        
+
+        # ✅ DRAW COLLAB LOGOS (REPLACES PROTOTYPE TEXT)
+        center_x = self.screen_width // 2
+
+        # ✅ TOP LOGO BAR (6BYTE - CAPIZTAHAN - CGG)
+        spacing = 20
+        top_y = 20  # controls how far from top
+
+        if self.logo_6byte and self.logo_capiz and self.logo_cgg:
+            total_width = (
+                self.logo_6byte.get_width() +
+                spacing +
+                self.logo_capiz.get_width() +
+                spacing +
+                self.logo_cgg.get_width()
+            )
+
+            start_x = self.screen_width // 2 - total_width // 2
+
+            # 6BYTE
+            screen.blit(self.logo_6byte, (start_x, top_y))
+            start_x += self.logo_6byte.get_width() + spacing
+
+            # CAPIZTAHAN
+            screen.blit(self.logo_capiz, (start_x, top_y))
+            start_x += self.logo_capiz.get_width() + spacing
+
+            # CGG
+            screen.blit(self.logo_cgg, (start_x, top_y))
+
         space_hint = self._render_text_with_border("Press 'SPACE' to Play", self.font_hints, (255, 255, 255), (0, 0, 0))
         esc_hint = self._render_text_with_border("Press 'ESC' to Quit", self.font_hints, (255, 255, 255), (0, 0, 0))
         
-        hint_y_start = self.button_rect.bottom + 60
+        hint_y_start = self.button_rect.bottom + 70
         screen.blit(space_hint, space_hint.get_rect(center=(self.screen_width // 2, hint_y_start)))
         screen.blit(esc_hint, esc_hint.get_rect(center=(self.screen_width // 2, hint_y_start + 50)))
 

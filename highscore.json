@@ -31,6 +31,21 @@
       "multiplier": 1.5
     },
     {
+      "score": 210,
+      "date": "2026-04-11 03:38",
+      "is_new": true,
+      "category": "culture",
+      "category_display": "Capiz Traditions",
+      "best_catch": "Ultra Rare Culture",
+      "catches": {
+        "very_common": 1,
+        "common": 7,
+        "rare": 2,
+        "ultra_rare": 1
+      },
+      "multiplier": 1.2
+    },
+    {
       "score": 207,
       "date": "2026-04-10 02:30",
       "is_new": true,
@@ -59,21 +74,6 @@
         "ultra_rare": 1
       },
       "multiplier": 1.5
-    },
-    {
-      "score": 180,
-      "date": "2026-04-11 02:23",
-      "is_new": true,
-      "category": "food",
-      "category_display": "Capiz Cuisine",
-      "best_catch": "Rare Food",
-      "catches": {
-        "very_common": 6,
-        "common": 10,
-        "rare": 2,
-        "ultra_rare": 0
-      },
-      "multiplier": 1.0
     }
   ]
 }
