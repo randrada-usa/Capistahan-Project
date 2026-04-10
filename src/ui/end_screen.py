@@ -96,6 +96,7 @@ class EndScreen:
     def __init__(self, screen_width=1920, screen_height=1080):
         self.screen_width = screen_width
         self.screen_height = screen_height
+        self.wish_used = False
 
         self.font_score = pygame.font.Font(None, 74)
         self.font_high = pygame.font.Font(None, 48)
@@ -205,7 +206,7 @@ class EndScreen:
                 return "quit"
 
         if event.type == pygame.MOUSEBUTTONDOWN and virtual_pos:
-            if self.wish_rect.collidepoint(virtual_pos) and self.game_state and self.game_state.is_wish_eligible():
+            if self.wish_rect.collidepoint(virtual_pos) and self.game_state and self.game_state.is_wish_eligible() and not self.wish_used:
                 if 'click' in self.sounds: self.sounds['click'].play()
                 self._make_wish()
                 return None
@@ -219,9 +220,10 @@ class EndScreen:
         return None
 
     def _make_wish(self):
-        if self.game_state:
+        if self.game_state and not self.wish_used:
             self.wish_result = self.game_state.resolve_wish()
             self.showing_wish_modal = True
+            self.wish_used = True  # Mark as used
 
     def _render_text_with_border(self, text, font, text_color, border_color, border_width=2):
         text_surface = font.render(text, True, text_color)

@@ -8,119 +8,174 @@ from src.game.game_state import GameState
 
 
 # ==========================================
-# TIMER CONFIGURATION - Change position here
+# TIMER CONFIGURATION
 # ==========================================
-TIMER_POSITION = "bottom_left"  # Options: "top_left", "top_right", "bottom_left", "bottom_right"
-TIMER_OFFSET_X = 50  # Pixels from left/right edge
-TIMER_OFFSET_Y = 50  # Pixels from top/bottom edge
+TIMER_POSITION = "bottom_left"
+TIMER_OFFSET_X = 50
+TIMER_OFFSET_Y = 50
 # ==========================================
 
-# Consistent window name with other screens
 CV_WINDOW_NAME = "GAMEFRICKS PROTOTYPE01 - Camera Feed"
 
 
+class PerlaHUD:
+    """
+    Perla character that reacts to catches above wish progress bar.
+    Category-specific sprites with expression states.
+    """
+    
+    def __init__(self, asset_manager, theme_manager, x=170, y=290):
+        self.assets = asset_manager
+        self.theme = theme_manager.get_theme() if theme_manager else 'food'
+        self.x = x
+        self.y = y
+        self.base_y = y
+        
+        # Animation states
+        self.is_jumping = False
+        self.jump_offset = 0
+        self.jump_velocity = 0
+        
+        # Expression states
+        self.current_expression = 'default'
+        self.expression_timer = 0
+        self.expression_duration = 0
+        
+        # Load category-specific sprites
+        self._load_sprites()
+        
+    def _load_sprites(self):
+        """Load perla sprites based on category."""
+        # Map categories to their default sprite files
+        default_sprites = {
+            'food': 'perla_food_default',  # assets\sprites\new_sprites\perla_(food,default).png
+            'culture': 'perla_culture',    # assets\sprites\new_sprites\perla_culture.png  
+            'people': 'perla_people'       # assets\sprites\new_sprites\perla_people.png
+        }
+        
+        # Try to load new sprites first, fallback to old naming
+        self.sprites = {
+            'default': self._load_sprite(default_sprites.get(self.theme, 'perla_default')),
+            'shock': self._load_sprite('1shock_perla'),      # Ultra Rare
+            'smiley': self._load_sprite('1smiley_perla'),    # Rare
+            'happy': self._load_sprite('1happy_perla'),      # Common/Very Common
+            'angry': self._load_sprite('1angry_perla')       # Bad
+        }
+        
+        # Fallback to default if specific not found
+        for key in self.sprites:
+            if self.sprites[key] is None:
+                self.sprites[key] = self.sprites['default']
+                
+    def _load_sprite(self, name):
+        """Helper to load sprite from new_sprites folder."""
+        # Try new path first
+        sprite = self.assets.get(name)
+        if sprite is None:
+            # Try loading manually if asset_manager doesn't have it
+            try:
+                import os
+                path = os.path.join('assets', 'sprites', 'new_sprites', f'{name}.png')
+                if os.path.exists(path):
+                    sprite = pygame.image.load(path).convert_alpha()
+                    sprite = pygame.transform.scale(sprite, (300, 300))  # Scale to appropriate size
+            except:
+                pass
+        else:
+            # Scale if loaded from asset manager
+            if sprite:
+                sprite = pygame.transform.scale(sprite, (300, 300))
+        return sprite
+        
+    def react_to_catch(self, item):
+        """
+        Change expression and jump based on item caught.
+        Handles rapid catches by immediately switching expression.
+        """
+        if item.type == 'bad':
+            self.set_expression('angry', 1.5)
+            # No jump for bad items
+        elif item.rarity == Rarity.ULTRA_RARE:
+            self.set_expression('shock', 2.0)
+            self.jump(15)  # Big jump
+        elif item.rarity == Rarity.RARE:
+            self.set_expression('smiley', 1.5)
+            self.jump(10)  # Medium jump
+        else:  # Common or Very Common
+            self.set_expression('happy', 1.0)
+            # No jump for common items
+            
+    def set_expression(self, expression, duration):
+        """Set expression immediately (interrupts current)."""
+        self.current_expression = expression
+        self.expression_duration = duration
+        self.expression_timer = duration
+        
+    def jump(self, velocity):
+        """Trigger jump animation."""
+        if not self.is_jumping:  # Only jump if not already jumping
+            self.is_jumping = True
+            self.jump_velocity = -velocity  # Negative = up
+            
+    def update(self, dt):
+        """Update animations."""
+        # Expression timer
+        if self.expression_timer > 0:
+            self.expression_timer -= dt
+            if self.expression_timer <= 0:
+                self.current_expression = 'default'
+                
+        # Jump physics
+        if self.is_jumping:
+            self.jump_offset += self.jump_velocity
+            self.jump_velocity += 40 * dt  # Gravity
+            
+            # Land
+            if self.jump_offset >= 0:
+                self.jump_offset = 0
+                self.is_jumping = False
+                self.jump_velocity = 0
+                
+    def render(self, screen):
+        """Draw Perla above wish progress bar."""
+        draw_y = self.y + self.jump_offset
+        
+        sprite = self.sprites.get(self.current_expression, self.sprites['default'])
+        
+        if sprite:
+            # Center on x position
+            rect = sprite.get_rect(center=(self.x, draw_y))
+            screen.blit(sprite, rect)
+            
+            # Debug: Draw indicator of what expression is showing (remove in final)
+            # font = pygame.font.Font(None, 24)
+            # label = font.render(self.current_expression, True, (255,255,255))
+            # screen.blit(label, (self.x - 30, draw_y - 50))
+
+
 class CornerChibi:
-    """Perla character that reacts to catches."""
+    """Simplified - no expressions, just static display."""
     
     def __init__(self, asset_manager, x=150, y=20):
         self.assets = asset_manager
         self.x = x
         self.y = y
-        self.current_expression = 'default'
-        self.expression_timer = 0
-        self.expression_duration = 2.0
         
-        self.priority = {
-            'default': 0,
-            'happy': 1,
-            'sad': 2,
-            'excited': 3
-        }
-        
-        self.bounce_offset = 0
-        self.bounce_velocity = 0
-        self.is_bouncing = False
-        self.blink_timer = 0
-        self.is_blinking = False
-        self.next_blink = 2.0
-        
-    def set_expression(self, expression, duration=2.0):
-        current_priority = self.priority.get(self.current_expression, 0)
-        new_priority = self.priority.get(expression, 0)
-        
-        if new_priority < current_priority and self.expression_timer > 0:
-            return
-        
-        self.current_expression = expression
-        self.expression_duration = duration
-        self.expression_timer = duration
-        
-        if expression != 'default':
-            self.is_bouncing = True
-            self.bounce_velocity = -10
-    
     def react_to_catch(self, item):
-        if item.type == 'bad':
-            self.set_expression('sad', 1.5)
-        elif item.rarity == Rarity.ULTRA_RARE:
-            self.set_expression('excited', 3.0)
-        elif item.rarity == Rarity.RARE:
-            self.set_expression('happy', 2.0)
-        else:
-            self.set_expression('happy', 1.0)
-    
+        pass  # No longer handles expressions
+        
     def update(self, dt):
-        if self.expression_timer > 0:
-            self.expression_timer -= dt
-            if self.expression_timer <= 0:
-                self.current_expression = 'default'
-                self.is_bouncing = False
-                self.bounce_offset = 0
+        pass  # No animations
         
-        if self.is_bouncing:
-            self.bounce_offset += self.bounce_velocity
-            self.bounce_velocity += 30 * dt
-            
-            if self.bounce_offset > 0:
-                self.bounce_offset = 0
-                self.bounce_velocity = 0
-                self.is_bouncing = False
-        
-        self.blink_timer += dt
-        if self.blink_timer >= self.next_blink:
-            self.is_blinking = True
-            if self.blink_timer >= self.next_blink + 0.15:
-                self.is_blinking = False
-                self.blink_timer = 0
-                self.next_blink = random.uniform(2.0, 4.0)
-    
     def render(self, screen):
-        sprite_key = f'perla_{self.current_expression}'
-        sprite = self.assets.get(sprite_key)
-        
-        if not sprite:
-            sprite = self.assets.get('perla_default')
-        
+        """Just draw static sprite if available."""
+        sprite = self.assets.get('corner_chibi')
         if sprite:
-            draw_y = self.y + self.bounce_offset
-            
-            if self.current_expression != 'default':
-                indicators = {'happy': '♪', 'sad': '...', 'excited': '★'}
-                if self.current_expression in indicators:
-                    font = pygame.font.Font(None, 48)
-                    indicator = font.render(indicators[self.current_expression], True, (255, 215, 0))
-                    screen.blit(indicator, (self.x + 60, int(draw_y - 20)))
-            
-            if self.is_blinking:
-                dark_sprite = sprite.copy()
-                dark_sprite.fill((0, 0, 0, 50), special_flags=pygame.BLEND_RGBA_SUB)
-                screen.blit(dark_sprite, (self.x, int(draw_y)))
-            else:
-                screen.blit(sprite, (self.x, int(draw_y)))
+            screen.blit(sprite, (self.x, self.y))
 
 
 class GameLoop:
-    """Main gameplay loop with NON-BLOCKING camera handling."""
+    """Main gameplay loop."""
     
     def __init__(self, screen, assets, theme_manager, gesture_controller=None, 
                  use_cv=False, scale_func=None):
@@ -137,21 +192,21 @@ class GameLoop:
         self.object_manager = ObjectManager(self.screen_w, assets, theme_manager)
         self.game_state = GameState(assets, theme_manager)
         
-        # PERLA at top-left
+        # Perla HUD - above wish progress bar (position adjusted for your layout)
+        self.perla_hud = PerlaHUD(assets, theme_manager, x=170, y=170)
+        
+        # Static corner decoration (no longer shows expressions)
         self.corner_chibi = CornerChibi(assets, x=200, y=100)
         
         self.clock = pygame.time.Clock()
         self.running = True
         self.hand_lost_timer = 0
         
-        # Timer font setup
+        # Fonts
         self.timer_font = pygame.font.Font(None, 72)
         self.timer_small_font = pygame.font.Font(None, 36)
         self.font = pygame.font.Font(None, 74)
         self.small_font = pygame.font.Font(None, 36)
-
-        # Use consistent window name with other screens
-        self._cv_window_created = False
         
         self.scale_func = scale_func if scale_func else lambda s: pygame.display.flip()        
         print(f"[GameLoop] Ready - Theme: {theme_manager.get_theme()}, CV: {self.use_cv}")
@@ -160,13 +215,11 @@ class GameLoop:
         """Run gameplay until game over or quit."""
         print("[GameLoop] Starting game loop...")
         
-        # Start the timer when gameplay begins
         self.game_state.start_timer()
         
         while not self.game_state.game_over and self.running:
             dt = self.clock.tick(60) / 1000.0
             
-            # CRITICAL: Always pump pygame events to prevent "Not Responding"
             pygame.event.pump()
             
             if not self.handle_events():
@@ -189,7 +242,6 @@ class GameLoop:
                 self.running = False
                 return False
             
-            # HANDLE RESIZE
             if event.type == pygame.VIDEORESIZE:
                 pygame.display.set_mode((event.w, event.h), pygame.RESIZABLE)
                 continue
@@ -200,7 +252,6 @@ class GameLoop:
                     return False
             
             if not self.use_cv and event.type == pygame.MOUSEMOTION:
-                # Use virtual mouse pos for player control too
                 from src.ui.start_screen import get_mouse_pos_virtual
                 virtual_pos = get_mouse_pos_virtual()
                 if virtual_pos:
@@ -225,27 +276,23 @@ class GameLoop:
         
         self.player.update(dt)
         self.object_manager.update(dt, self.game_state.score)
+        self.perla_hud.update(dt)  # Update Perla animations
+        self.corner_chibi.update(dt)
         
-        # Collisions - removed missed_good penalty
+        # Collisions
         caught, _ = self.object_manager.check_collisions(
             self.player.get_hitbox()
         )
         
         for item in caught:
             self.game_state.handle_caught([item])
-            self.corner_chibi.react_to_catch(item)
-            
-            if item.rarity == Rarity.ULTRA_RARE:
-                self.player.set_expression('super_excited', 1.0)
-            elif item.rarity == Rarity.RARE:
-                self.player.set_expression('excited', 0.5)
+            # Send reaction to Perla HUD immediately (handles rapid fire)
+            self.perla_hud.react_to_catch(item)
         
-        # Check game over (now checks timer)
         self.game_state.check_game_over()
-        self.corner_chibi.update(dt)
 
     def render(self):
-        """Render everything to virtual screen, then scale to actual."""
+        """Render everything."""
         # Background
         bg = self.assets.get('background')
         if bg:
@@ -261,70 +308,31 @@ class GameLoop:
         # HUD
         self._draw_hud()
         
-        # CRITICAL: Scale to actual display using provided function
+        # Scale to actual display
         self.scale_func(self.screen)
         
-        # Camera display - use consistent window name
+        # Camera display
         if self.use_cv:
-            self._update_camera_display()
             try:
-                key = cv2.waitKey(1) & 0xFF
-                if key == 27:  # ESC in CV window
-                    pass
+                debug_frame = self.gesture_controller.get_debug_frame()
+                if debug_frame is not None:
+                    cv2.imshow(CV_WINDOW_NAME, debug_frame)
+                    cv2.waitKey(1)
             except Exception as e:
-                print(f"[GameLoop] cv2.waitKey error: {e}")
-                self.use_cv = False
-
-    def _update_camera_display(self):
-        """Push the latest debug frame to the camera window."""
-        if not self.gesture_controller:
-            return
-        
-        try:
-            debug_frame = self.gesture_controller.get_debug_frame()
-            
-            if debug_frame is not None:
-                # Use the same window name as main.py and other screens
-                cv2.imshow(CV_WINDOW_NAME, debug_frame)
-
-        except Exception as e:
-            print(f"[GameLoop] Camera display error (disabling): {e}")
-            self.use_cv = False
-
-    def _get_timer_position(self, timer_width, timer_height):
-        """Calculate timer position based on TIMER_POSITION config."""
-        if TIMER_POSITION == "bottom_left":
-            x = TIMER_OFFSET_X
-            y = self.screen_h - timer_height - TIMER_OFFSET_Y
-        elif TIMER_POSITION == "bottom_right":
-            x = self.screen_w - timer_width - TIMER_OFFSET_X
-            y = self.screen_h - timer_height - TIMER_OFFSET_Y
-        elif TIMER_POSITION == "top_left":
-            x = TIMER_OFFSET_X
-            y = TIMER_OFFSET_Y
-        elif TIMER_POSITION == "top_right":
-            x = self.screen_w - timer_width - TIMER_OFFSET_X
-            y = TIMER_OFFSET_Y
-        else:
-            # Default bottom left
-            x = TIMER_OFFSET_X
-            y = self.screen_h - timer_height - TIMER_OFFSET_Y
-        
-        return x, y
+                print(f"[GameLoop] CV display error: {e}")
 
     def _draw_hud(self):
-        """Draw HUD with Timer instead of Health."""
-        # Score (top-right) - MOVED UP slightly to make room for hand lost
+        """Draw HUD."""
+        # Score (top-right)
         score_text = self.font.render(f"Score: {self.game_state.score}", True, (255, 255, 255))
         self.screen.blit(score_text, (self.screen_w - score_text.get_width() - 200, 80))
         
-        # REMOVED: Category/Theme indicator (Capiz Traditions 1.2x)
-        # REMOVED: Input mode indicator (HAND TRACKING/MOUSE MODE)
-        
-        # TIMER DISPLAY - Bottom
+        # TIMER DISPLAY
         self._draw_timer()
         
-        # Wish progress 
+        # Wish progress with Perla above it
+        self.perla_hud.render(self.screen)  # Draw Perla first (behind text if overlap)
+        
         if not self.game_state.is_wish_eligible():
             status = self.game_state.get_wish_status()
             bar_w = 300
@@ -352,49 +360,62 @@ class GameLoop:
         
         # Hand lost warning - CENTERED AT TOP
         if self.hand_lost_timer > 0.1:
-            if (pygame.time.get_ticks() // 200) % 2 == 0:  # Blink effect
+            if (pygame.time.get_ticks() // 200) % 2 == 0:
                 warning = self.font.render("! HAND LOST !", True, (255, 50, 50))
-                rect = warning.get_rect(center=(self.screen_w // 2, 80))  # Center top
+                rect = warning.get_rect(center=(self.screen_w // 2, 80))
                 self.screen.blit(warning, rect)
     
     def _draw_timer(self):
-        """Draw the game timer with visual bar."""
-        # INCREASED text_height from 40 to 55 to move number up
+        """Draw timer."""
         bar_width = 300
         bar_height = 20
-        text_height = 55  # Was 40, now 55 - moves number higher above bar
+        text_height = 55
         
-        # Get position based on config
         x, y = self._get_timer_position(bar_width, bar_height + text_height + 10)
         
-        # Background bar (dark gray)
         pygame.draw.rect(self.screen, (50, 50, 50), 
                         (x, y + text_height, bar_width, bar_height), border_radius=10)
         
-        # Time remaining fill (color changes based on urgency)
         time_pct = self.game_state.get_time_percentage()
         fill_width = int(bar_width * time_pct)
         
         if time_pct > 0.5:
-            color = (0, 255, 100)  # Green
+            color = (0, 255, 100)
         elif time_pct > 0.25:
-            color = (255, 215, 0)  # Yellow/Gold
+            color = (255, 215, 0)
         else:
-            color = (255, 50, 50)   # Red (critical)
+            color = (255, 50, 50)
         
         if fill_width > 0:
             pygame.draw.rect(self.screen, color, 
                             (x, y + text_height, fill_width, bar_height), border_radius=10)
         
-        # Border
         pygame.draw.rect(self.screen, (255, 255, 255), 
                         (x, y + text_height, bar_width, bar_height), 2, border_radius=10)
         
-        # Time text (above bar) - Now with more spacing due to text_height=55
         time_str = self.game_state.get_formatted_time()
         time_text = self.timer_font.render(time_str, True, (255, 255, 255))
         self.screen.blit(time_text, (x, y))
         
-        # "TIME" label
         label_text = self.timer_small_font.render("TIME REMAINING", True, (200, 200, 200))
         self.screen.blit(label_text, (x, y + text_height + bar_height + 5))
+        
+    def _get_timer_position(self, timer_width, timer_height):
+        """Calculate timer position."""
+        if TIMER_POSITION == "bottom_left":
+            x = TIMER_OFFSET_X
+            y = self.screen_h - timer_height - TIMER_OFFSET_Y
+        elif TIMER_POSITION == "bottom_right":
+            x = self.screen_w - timer_width - TIMER_OFFSET_X
+            y = self.screen_h - timer_height - TIMER_OFFSET_Y
+        elif TIMER_POSITION == "top_left":
+            x = TIMER_OFFSET_X
+            y = TIMER_OFFSET_Y
+        elif TIMER_POSITION == "top_right":
+            x = self.screen_w - timer_width - TIMER_OFFSET_X
+            y = TIMER_OFFSET_Y
+        else:
+            x = TIMER_OFFSET_X
+            y = self.screen_h - timer_height - TIMER_OFFSET_Y
+        
+        return x, y

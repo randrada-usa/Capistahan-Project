@@ -1,6 +1,36 @@
 {
   "high_scores": [
     {
+      "score": 309,
+      "date": "2026-04-11 03:19",
+      "is_new": true,
+      "category": "people",
+      "category_display": "Capiz Community",
+      "best_catch": "Rare People",
+      "catches": {
+        "very_common": 6,
+        "common": 3,
+        "rare": 6,
+        "ultra_rare": 0
+      },
+      "multiplier": 1.5
+    },
+    {
+      "score": 259,
+      "date": "2026-04-11 02:49",
+      "is_new": true,
+      "category": "people",
+      "category_display": "Capiz Community",
+      "best_catch": "Ultra Rare People",
+      "catches": {
+        "very_common": 5,
+        "common": 5,
+        "rare": 2,
+        "ultra_rare": 1
+      },
+      "multiplier": 1.5
+    },
+    {
       "score": 207,
       "date": "2026-04-10 02:30",
       "is_new": true,
@@ -31,46 +61,17 @@
       "multiplier": 1.5
     },
     {
-      "score": 172,
-      "date": "2026-04-09 21:09",
-      "is_new": true,
-      "category": "people",
-      "category_display": "Capiz Community",
-      "best_catch": "Ultra Rare People",
-      "catches": {
-        "common": 4,
-        "rare": 1,
-        "ultra_rare": 1
-      },
-      "multiplier": 1.5
-    },
-    {
-      "score": 170,
-      "date": "2026-04-10 23:32",
-      "is_new": true,
-      "category": "people",
-      "category_display": "Capiz Community",
-      "best_catch": "Rare People",
-      "catches": {
-        "very_common": 3,
-        "common": 5,
-        "rare": 2,
-        "ultra_rare": 0
-      },
-      "multiplier": 1.5
-    },
-    {
-      "score": 165,
-      "date": "2026-04-10 02:24",
+      "score": 180,
+      "date": "2026-04-11 02:23",
       "is_new": true,
       "category": "food",
       "category_display": "Capiz Cuisine",
-      "best_catch": "Ultra Rare Food",
+      "best_catch": "Rare Food",
       "catches": {
-        "very_common": 1,
-        "common": 6,
+        "very_common": 6,
+        "common": 10,
         "rare": 2,
-        "ultra_rare": 1
+        "ultra_rare": 0
       },
       "multiplier": 1.0
     }
