@@ -232,7 +232,7 @@ class ObjectManager:
         # Difficulty scaling
         time_level = int(self.game_time // 10)
         score_level = score // 50
-        difficulty_level = time_level + score_level
+        difficulty_level = (time_level // 2) + score_level
         
         self.speed_multiplier = 0.50 + difficulty_level * 0.25
         
