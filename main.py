@@ -1,6 +1,6 @@
 """
 main.py
-Capiztahan Gacha Game - Main Entry Point
+Capiztahan Gacha Game - Main Entry Point (CLEAN MERGE)
 """
 
 import sys
@@ -56,6 +56,14 @@ class Game:
             
         self.init_cv()
         
+        # Pre-load shared UI assets (wheel icons, etc.) once at startup
+        print("[Game] Pre-loading shared UI assets...")
+        try:
+            self.pre_assets = AssetManager('food').load_all()
+        except Exception as e:
+            print(f"[Game] Pre-asset load failed: {e}")
+            self.pre_assets = None
+
         # Theme/Assets set after wheel
         self.theme_manager = None
         self.assets = None
@@ -81,6 +89,7 @@ class Game:
         try:
             while self.running:
                 # 1. START SCREEN
+                # ==============================
                 print("[Game] Showing start screen...")
                 result, start_screen_snapshot = show_start_screen(
                     self.screen, 
@@ -92,8 +101,13 @@ class Game:
                 if not result:
                     print("[Game] User quit from start screen")
                     break
+
+                # Capture start screen snapshot
+                start_screen_snapshot = self.screen.copy()
                 
+                # ==============================
                 # 2. WHEEL SCREEN
+                # ==============================
                 print("[Game] Showing wheel screen...")
                 selected_theme = show_wheel_screen(
                     self.screen,
@@ -106,11 +120,13 @@ class Game:
                 
                 if selected_theme is None:
                     print("[Game] User quit from wheel")
-                    break
+                    continue
                 
                 print(f"[Game] Selected theme: {selected_theme}")
                 
-                # 3. LOAD ASSETS (NOW loads food_bg.png, etc.)
+                # ==============================
+                # 3. LOAD THEME ASSETS
+                # ==============================
                 try:
                     self.theme_manager = ThemeManager(selected_theme)
                     self.assets = AssetManager(selected_theme).load_all()
@@ -118,7 +134,9 @@ class Game:
                     print(f"[Game] Error loading assets: {e}")
                     continue
                 
+                # ==============================
                 # 4. GAMEPLAY LOOP
+                # ==============================
                 print("[Game] Starting gameplay loop...")
                 game_loop = GameLoop(
                     screen=self.screen,
@@ -128,7 +146,6 @@ class Game:
                     use_cv=self.use_cv
                 )
                 
-                # THIS RUNS THE ACTUAL GAME
                 game_result = game_loop.run()
                 
                 if not game_result['continue']:
@@ -137,7 +154,9 @@ class Game:
                 
                 print(f"[Game] Game over! Score: {game_result['game_state'].score}")
                 
+                # ==============================
                 # 5. END SCREEN
+                # ==============================
                 retry = show_end_screen(
                     self.screen,
                     game_result['game_state'],
@@ -149,10 +168,10 @@ class Game:
                 
                 if retry:
                     print("[Game] Player chose retry - going to wheel")
-                    continue  # Go back to wheel
+                    continue
                 else:
                     print("[Game] Player chose menu - going to start")
-                    continue  # Go back to start screen
+                    continue
                     
         finally:
             self.cleanup()
