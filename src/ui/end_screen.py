@@ -39,6 +39,17 @@ def get_mouse_pos_virtual():
 
 class UIFallingManager:
     """Manages decorative falling items for the background."""
+    
+    # Rarity drop rates
+    RARITY_WEIGHTS = {
+        Rarity.VERY_COMMON: 0.35,
+        Rarity.COMMON: 0.40,
+        Rarity.RARE: 0.20,
+        Rarity.ULTRA_RARE: 0.05
+    }
+    
+    CATEGORIES = ['food', 'people']
+    
     def __init__(self, screen_width, screen_height, assets=None):
         self.screen_width = screen_width
         self.screen_height = screen_height
@@ -48,9 +59,35 @@ class UIFallingManager:
 
     def spawn_item(self):
         x = random.randint(60, self.screen_width - 60)
-        item_type = 'good' if random.random() < 0.7 else 'bad'
-        speed = random.uniform(2, 4) 
-        self.items.append(FallingItem(x, item_type, Rarity.COMMON, speed, self.assets))
+        item_type = 'good'
+        
+        # Weighted rarity
+        rarities = list(self.RARITY_WEIGHTS.keys())
+        weights = list(self.RARITY_WEIGHTS.values())
+        rarity = random.choices(rarities, weights=weights, k=1)[0]
+        
+        speed = random.uniform(2, 4)
+        item = FallingItem(x, item_type, rarity, speed, self.assets, None)
+        
+        # Random category
+        category = random.choice(self.CATEGORIES)
+        
+        # Map rarity to prefix
+        rarity_prefixes = {
+            Rarity.VERY_COMMON: 'ultracommon',
+            Rarity.COMMON: 'common',
+            Rarity.RARE: 'rare',
+            Rarity.ULTRA_RARE: 'ultrarare'
+        }
+        prefix = rarity_prefixes[rarity]
+        
+        # Use cross-category key: "food_common", "culture_rare", "people_ultrarare"
+        item.item_key = f'{category}_{prefix}'
+        
+        # Store category for glow effects
+        item.category = category
+        
+        self.items.append(item)
 
     def update(self, dt):
         self.spawn_timer += dt

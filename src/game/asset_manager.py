@@ -59,11 +59,9 @@ class AssetManager:
         self._load_shared('title2', os.path.join("ui", "title2.png"))
         
         # --- GLOBAL EFFECTS (Glows) ---
-        # Increased to 240x240 for high quality (source is 1275x1243)
         self._load_shared('common_glow', os.path.join("effects", "common_glow.png"), (130, 130))
         self._load_shared('rare_glow', os.path.join("effects", "rare_glow.png"), (130, 130))
         self._load_shared('ultra_rare_glow', os.path.join("effects", "ultra_rare_glow.png"), (130, 130))
-        # Note: wish_glow skipped per instructions
         
         # --- SHARED START/END SCREEN BACKGROUND ---
         self._load_shared('start_background', os.path.join("backgrounds", "bg_logo.png"), target_size=(1920, 1080))
@@ -76,15 +74,12 @@ class AssetManager:
         elif theme == 'people':
             self._load_themed('background', os.path.join("background", "people_bg.png"), target_size=(1920, 1080))
         
-        # --- THEME-SPECIFIC ITEMS ---
-        # Determine item suffix based on theme
+        # --- THEME-SPECIFIC ITEMS (for gameplay) ---
         if theme == 'people':
             item_suffix = 'book'
         else:
             item_suffix = 'item'
         
-        # Load good items: ultracommon, common, rare, ultrarare
-        # Increased to 200x200 for high quality (source is 1000x1000)
         self._load_themed(f'ultracommon_{item_suffix}', 
                          os.path.join("sprites", f"ultracommon_{item_suffix}.png"), 
                          target_size=(110, 110))
@@ -98,10 +93,33 @@ class AssetManager:
                          os.path.join("sprites", f"ultrarare_{item_suffix}.png"), 
                          target_size=(110, 110))
         
-        # Load bad item (category-specific filename: bad_item_food.png, etc.)
+        # Load bad item
         self._load_themed(f'bad_item_{theme}', 
                          os.path.join("sprites", f"bad_item_{theme}.png"), 
                          target_size=(110, 110))
+        
+        # --- LOAD ALL CATEGORY SPRITES FOR UI FALLING ITEMS (Option A) ---
+        # This loads sprites from ALL themes so menus can show variety
+        # Memory cost: ~580KB total for 12 sprites (110x110 each)
+        log("[AssetManager] Loading cross-category sprites for UI...")
+        
+        # Food category (uses 'item' suffix)
+        for rarity in ['ultracommon', 'common', 'rare', 'ultrarare']:
+            self._load_shared(f'food_{rarity}', 
+                             os.path.join("food", "sprites", f"{rarity}_item.png"), 
+                             target_size=(110, 110))
+        
+        # Culture category (uses 'item' suffix)
+        for rarity in ['ultracommon', 'common', 'rare', 'ultrarare']:
+            self._load_shared(f'culture_{rarity}', 
+                             os.path.join("culture", "sprites", f"{rarity}_item.png"), 
+                             target_size=(110, 110))
+        
+        # People category (uses 'book' suffix)
+        for rarity in ['ultracommon', 'common', 'rare', 'ultrarare']:
+            self._load_shared(f'people_{rarity}', 
+                             os.path.join("people", "sprites", f"{rarity}_book.png"), 
+                             target_size=(110, 110))
         
         # --- THEME-SPECIFIC PLAYER SPRITES ---
         self._load_themed('sprite_idle', os.path.join("sprites", "Sprite1.png"), target_size=(190, 320))
@@ -115,7 +133,7 @@ class AssetManager:
         for i in range(1, 7):
             self._load_shared(f'h{i}', os.path.join("sprites", f"H{i}.png"), target_size=(300, 100))
         
-        # === PERLA (Default only for now) ===
+        # === PERLA ===
         self._load_shared('perla_default', os.path.join("sprites", "Perla (default).png"), (150, 150))
         
         # === AUDIO ===

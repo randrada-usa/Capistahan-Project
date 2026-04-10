@@ -78,13 +78,13 @@ class PerlaHUD:
                 path = os.path.join('assets', 'sprites', 'new_sprites', f'{name}.png')
                 if os.path.exists(path):
                     sprite = pygame.image.load(path).convert_alpha()
-                    sprite = pygame.transform.scale(sprite, (300, 300))  # Scale to appropriate size
+                    sprite = pygame.transform.scale(sprite, (250, 250))  # Scale to appropriate size
             except:
                 pass
         else:
             # Scale if loaded from asset manager
             if sprite:
-                sprite = pygame.transform.scale(sprite, (300, 300))
+                sprite = pygame.transform.scale(sprite, (250, 250))
         return sprite
         
     def react_to_catch(self, item):
