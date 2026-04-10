@@ -12,6 +12,9 @@ class CameraProfile:
     Configuration for hand tracking based on camera mounting position.
     """
     
+    # FIXED: Named constant for manual exposure mode
+    MANUAL_EXPOSURE_MODE = 0.25  # OpenCV value for manual exposure
+    
     PROFILES = {
         'front': {
             'name': 'Front-facing Webcam',
@@ -51,7 +54,7 @@ class CameraProfile:
             'backup_landmark': 'middle_finger_base',
             
             # Camera settings for overhead lighting
-            'auto_exposure': 0.25,
+            'auto_exposure': 0.55,
             'manual_exposure': -4,
             'brightness': 150,
             'contrast': 128,
@@ -82,7 +85,8 @@ class CameraProfile:
             cap.set(cv2.CAP_PROP_AUTO_EXPOSURE, auto_exp)
         
         manual_exp = self.get('manual_exposure')
-        if manual_exp is not None and auto_exp == 0.25:
+        # FIXED: Use named constant instead of magic number
+        if manual_exp is not None and auto_exp == self.MANUAL_EXPOSURE_MODE:
             cap.set(cv2.CAP_PROP_EXPOSURE, manual_exp)
         
         brightness = self.get('brightness')

@@ -9,12 +9,8 @@ import os
 from datetime import datetime
 from enum import Enum
 
-
-class Rarity(Enum):
-    """NEW: Gacha rarity levels"""
-    COMMON = "common"
-    RARE = "rare"
-    ULTRA_RARE = "ultra_rare"
+# Import Rarity from falling_objects to avoid duplication
+from src.game.falling_objects import Rarity
 from src.game.wish_system import WishSystem
 
 
@@ -52,10 +48,11 @@ class GameState:
         # Session tracking
         self.session_best_catch = None
         self.catches_by_rarity = {
+            'very_common': 0,
             'common': 0,
             'rare': 0,
             'ultra_rare': 0
-        }
+    }
         
         # Events for Jen (cleared each frame)
         self.catch_events = {
@@ -66,36 +63,15 @@ class GameState:
         }
         self._event_queue = []
         
+        # FIXED: Track last milestone to detect crossings properly
+        self._last_milestone = 0
+        
         # Initialize wish system with category
-        from src.game.wish_system import WishSystem
         self.wish_system = WishSystem(category=self.category)
         
         # High scores
         self.high_scores = self._load_high_scores()
         self.high_score = self.high_scores[0]['score'] if self.high_scores else 0
-        
-        # === NEW: Event system for Jen ===
-        self._events = {
-            'ultra_rare_caught': False,
-            'rare_caught': False,
-            'common_caught': False,
-            'missed': False,
-            'screen_flash': False
-        }
-        
-        # === NEW: Rarity weights for Gio ===
-        self.rarity_weights = {
-            Rarity.COMMON: 0.70,
-            Rarity.RARE: 0.25,
-            Rarity.ULTRA_RARE: 0.05
-        }
-        
-        # Score values by rarity
-        self.rarity_scores = {
-            Rarity.COMMON: 10,
-            Rarity.RARE: 50,
-            Rarity.ULTRA_RARE: 100
-        }
     
     def _load_high_scores(self):
         try:
@@ -103,16 +79,16 @@ class GameState:
                 with open(self.HIGHSCORE_FILE, 'r') as f:
                     data = json.load(f)
                     return data.get('high_scores', [])
-        except:
-            pass
+        except Exception as e:
+            print(f"[GameState] Error loading high scores: {e}")
         return []
     
     def _save_high_scores(self):
         try:
             with open(self.HIGHSCORE_FILE, 'w') as f:
                 json.dump({'high_scores': self.high_scores}, f, indent=2)
-        except:
-            pass
+        except Exception as e:
+            print(f"[GameState] Error saving high scores: {e}")
     
     def _trigger_event(self, event_name, data=None):
         """Queue event for Jen's UI to consume."""
@@ -148,13 +124,17 @@ class GameState:
                 
                 # Apply category multiplier
                 points = int(base_points * self.multiplier)
+                
+                # FIXED: Check milestone BEFORE adding score to detect threshold crossing
+                old_score = self.score
                 self.score += points
                 
-                # Track rarity stats
-                self.catches_by_rarity[item.rarity] += 1
+                # In handle_caught, update the tracking line:
+                rarity_key = item.rarity.value  # This now includes 'very_common'
+                self.catches_by_rarity[rarity_key] += 1
                 
                 # Track best single catch
-                catch_desc = f"{item.rarity.replace('_', ' ').title()} {item.category.title()}"
+                catch_desc = f"{rarity_key.replace('_', ' ').title()} {self.category.title()}"
                 if (not self.session_best_catch or 
                     base_points > self.session_best_catch['base_points']):
                     self.session_best_catch = {
@@ -163,8 +143,8 @@ class GameState:
                         'total_points': points
                     }
                 
-                # Fire rarity events for Jen
-                if item.rarity == 'rare':
+                # Fire rarity events for Jen - compare Enum to Enum
+                if item.rarity == Rarity.RARE:
                     self._trigger_event('rare_caught', {
                         'points': points,
                         'description': catch_desc
@@ -172,7 +152,7 @@ class GameState:
                     if self.assets and 'plus_score' in self.assets.sounds:
                         self.assets.sounds['plus_score'].play()
                 
-                elif item.rarity == 'ultra_rare':
+                elif item.rarity == Rarity.ULTRA_RARE:
                     self._trigger_event('ultra_rare_caught', {
                         'points': points,
                         'description': catch_desc
@@ -183,9 +163,12 @@ class GameState:
                     if self.assets and 'good' in self.assets.sounds:
                         self.assets.sounds['good'].play()
                 
-                # Milestone events every 50 points
-                if self.score > 0 and self.score % 50 == 0:
+                # FIXED: Milestone detection - check if we crossed any 50-point threshold
+                old_milestone = old_score // 50
+                new_milestone = self.score // 50
+                if new_milestone > old_milestone and self.score > 0:
                     self._trigger_event('milestone_reached', {'score': self.score})
+                    self._last_milestone = new_milestone * 50
                 
             else:
                 self.lives -= 1
@@ -204,6 +187,12 @@ class GameState:
             self.game_over = True
             self._add_high_score()
         return self.game_over
+    
+    def trigger_game_over(self):
+        """Called by timer running out"""
+        if not self.game_over:
+            self.game_over = True
+            self._add_high_score()
     
     def _add_high_score(self):
         if self.score > 0:
@@ -252,6 +241,7 @@ class GameState:
         self.catches_by_rarity = {'common': 0, 'rare': 0, 'ultra_rare': 0}
         self.catch_events = {k: False for k in self.catch_events}
         self._event_queue.clear()
+        self._last_milestone = 0  # FIXED: Reset milestone tracker
         
         # Re-initialize wish system for new category
         if self.theme_manager:

@@ -42,7 +42,7 @@ class Player:
         self.basket_height = 40
         self.basket_offset_y = 175
         
-        # === NEW: Expression System (Jen) ===
+        # Expression System (Jen)
         self.current_expression = Expression.NEUTRAL
         self.expression_timer = 0
         self.expression_duration = 0
@@ -62,6 +62,9 @@ class Player:
         self.blink_timer = 0
         self.is_blinking = False
         self.next_blink = random.uniform(2.0, 4.0)
+        
+        # FIXED: Store initial Y for reset
+        self._initial_y = 970
     
     def set_target_x(self, x):
         """Original method - unchanged"""
@@ -81,15 +84,10 @@ class Player:
         """Original method"""
         self.frozen = False
     
-    # === NEW METHODS FOR JEN'S EXPRESSION SYSTEM ===
-    
     def set_expression(self, expression_input, duration=0.5):
         """
         Set Billy's expression. Auto-reverts to neutral after duration.
         Called by game loop when catches happen.
-        
-        expression_input: string ('excited', 'super_excited', 'sad') or Expression enum
-        duration: how long to hold the expression in seconds
         """
         # Convert string to enum if needed
         if isinstance(expression_input, str):
@@ -136,7 +134,7 @@ class Player:
     
     def update(self, dt):
         """Modified: Added expression and particle updates"""
-        # === ORIGINAL MOVEMENT CODE (unchanged) ===
+        # Movement code (unchanged)
         if not self.frozen:
             diff = self.target_x - self.x
             
@@ -149,13 +147,13 @@ class Player:
             
             self.x += diff * self.lerp_speed
         
-        # === NEW: Expression timer ===
+        # Expression timer
         if self.expression_timer > 0:
             self.expression_timer -= dt
             if self.expression_timer <= 0:
                 self.current_expression = Expression.NEUTRAL
         
-        # === NEW: Particle physics ===
+        # Particle physics
         for p in self.particles[:]:
             p['x'] += p['vx']
             p['y'] += p['vy']
@@ -164,7 +162,7 @@ class Player:
             if p['life'] <= 0:
                 self.particles.remove(p)
         
-        # === NEW: Blinking ===
+        # Blinking
         self.blink_timer += dt
         if self.blink_timer >= self.next_blink:
             self.is_blinking = True
@@ -175,17 +173,16 @@ class Player:
     
     def render(self, screen):
         """Modified: Added particles and expression visualization"""
-        # === NEW: Draw particles behind player ===
+        # Draw particles behind player
         for p in self.particles:
             alpha = int(255 * p['life'])
-            # Create surface with per-pixel alpha
             particle_surf = pygame.Surface((p['size'] * 2, p['size'] * 2), pygame.SRCALPHA)
             color_with_alpha = (*p['color'][:3], alpha)
             pygame.draw.circle(particle_surf, color_with_alpha, 
                              (p['size'], p['size']), int(p['size'] * p['life']))
             screen.blit(particle_surf, (int(p['x'] - p['size']), int(p['y'] - p['size'])))
         
-        # === ORIGINAL SPRITE RENDERING (with expression tint) ===
+        # Sprite selection
         if self.facing == 'left':
             sprite_key = 'sprite_left'
         elif self.facing == 'right':
@@ -206,6 +203,14 @@ class Player:
             rect.centerx = int(self.x)
             rect.bottom = int(self.y + self.height // 2 - 10)
             screen.blit(tinted, rect)
+            
+            # FIXED: Draw blinking overlay when blinking
+            if self.is_blinking:
+                blink_surf = pygame.Surface((rect.width, rect.height // 5), pygame.SRCALPHA)
+                blink_surf.fill((0, 0, 0, 200))
+                # Position over eyes (approximate)
+                blink_rect = blink_surf.get_rect(center=(rect.centerx, rect.top + rect.height // 4))
+                screen.blit(blink_surf, blink_rect)
             
             # Draw expression indicator above head
             if self.current_expression != Expression.NEUTRAL:
@@ -228,8 +233,13 @@ class Player:
             )
             pygame.draw.rect(screen, color, rect, border_radius=10)
             pygame.draw.rect(screen, (255, 255, 255), rect, width=2, border_radius=10)
+            
+            # FIXED: Draw blinking for fallback too
+            if self.is_blinking:
+                pygame.draw.rect(screen, (0, 0, 0), 
+                               (rect.centerx - 20, rect.top + 20, 40, 10), border_radius=5)
         
-        # === ORIGINAL: Hand lost indicator ===
+        # Hand lost indicator
         if self.frozen:
             pulse = abs(math.sin(pygame.time.get_ticks() / 200)) * 10
             pygame.draw.circle(screen, (255, 50, 50),
@@ -270,10 +280,16 @@ class Player:
         return self.get_hitbox()
     
     def reset(self):
-        """Reset for new game"""
+        """FIXED: Fully reset all state for new game"""
         self.x = self.screen_width // 2
         self.target_x = self.x
+        self.y = self._initial_y
         self.current_expression = Expression.NEUTRAL
         self.expression_timer = 0
+        self.expression_duration = 0
         self.particles = []
         self.frozen = False
+        self.facing = 'idle'
+        self.blink_timer = 0
+        self.is_blinking = False
+        self.next_blink = random.uniform(2.0, 4.0)
