@@ -1,6 +1,6 @@
 """
 main.py
-Capiztahan Gacha Game - Main Entry Point
+Capiztahan Gacha Game - Main Entry Point (CLEAN MERGE)
 """
 
 import sys
@@ -49,6 +49,14 @@ class Game:
         self.use_cv = False
         self.init_cv()
         
+        # Pre-load shared UI assets (wheel icons, etc.) once at startup
+        print("[Game] Pre-loading shared UI assets...")
+        try:
+            self.pre_assets = AssetManager('food').load_all()
+        except Exception as e:
+            print(f"[Game] Pre-asset load failed: {e}")
+            self.pre_assets = None
+
         # Theme/Assets set after wheel
         self.theme_manager = None
         self.assets = None
@@ -69,26 +77,10 @@ class Game:
     def run(self):
         """Main game flow."""
         try:
-            while self.running:
-                # Start Screen
-                if not show_start_screen(
-                    self.screen,
-                    self.screen_w,
-                    self.screen_h,
-                    gesture_controller=self.gesture_controller if self.use_cv else None
-                ):
-                    self.running = False
-                    break
-
-                # CAPTURE START SCREEN FOR MODAL BACKGROUND
-                start_screen_snapshot = self.screen.copy()
-
-                # WHEEL SCREEN - Category selection (with pop-out effect)
-                selected_category = show_wheel_screen(
-                    self.screen,
-                    self.screen_w,
             while True:
+                # ==============================
                 # 1. START SCREEN
+                # ==============================
                 print("[Game] Showing start screen...")
                 if not show_start_screen(
                     self.screen, 
@@ -98,66 +90,32 @@ class Game:
                 ):
                     print("[Game] User quit from start screen")
                     break
+
+                # Capture start screen snapshot
+                start_screen_snapshot = self.screen.copy()
                 
+                # ==============================
                 # 2. WHEEL SCREEN
+                # ==============================
                 print("[Game] Showing wheel screen...")
                 selected_theme = show_wheel_screen(
                     self.screen,
                     self.screen_w,
                     self.screen_h,
                     gesture_controller=self.gesture_controller if self.use_cv else None,
-                    assets=self.assets,
-                    background=start_screen_snapshot  # NEW
-                )
-
-                if selected_category is None:
-                    continue  # Back to start screen
-
-                print(f"[Game] Selected category: {selected_category}")
-
-                # Gameplay with selected category
-                self.reset_game(category=selected_category)
-                game_active = True
-
-                while game_active and self.running:
-                    dt = self.clock.tick(self.fps) / 1000.0
-
-                    if not self.handle_events():
-                        break
-
-                    p_x, p_y = self.update(dt)
-                    self.render(p_x, p_y)
-
-                    if self.game_state.game_over:
-                        game_active = False
-
-                # End Screen
-                if self.running:
-                    pygame.mixer.music.fadeout(1000)
-                    snapshot = self.screen.copy()
-
-                    retry = show_end_screen(
-                        self.screen,
-                        self.game_state,
-                        snapshot,
-                        self.screen_w,
-                        self.screen_h,
-                        gesture_controller=self.gesture_controller if self.use_cv else None
-                    )
-
-                    if not retry:
-                        pass
-
-                    assets=None
+                    assets=self.pre_assets,   # ← perla icons now visible
+                    background=start_screen_snapshot
                 )
                 
                 if selected_theme is None:
                     print("[Game] User quit from wheel")
-                    break
+                    continue
                 
                 print(f"[Game] Selected theme: {selected_theme}")
                 
-                # 3. LOAD ASSETS (NOW loads food_bg.png, etc.)
+                # ==============================
+                # 3. LOAD THEME ASSETS
+                # ==============================
                 try:
                     self.theme_manager = ThemeManager(selected_theme)
                     self.assets = AssetManager(selected_theme).load_all()
@@ -165,7 +123,9 @@ class Game:
                     print(f"[Game] Error loading assets: {e}")
                     continue
                 
+                # ==============================
                 # 4. GAMEPLAY LOOP
+                # ==============================
                 print("[Game] Starting gameplay loop...")
                 game_loop = GameLoop(
                     screen=self.screen,
@@ -175,7 +135,6 @@ class Game:
                     use_cv=self.use_cv
                 )
                 
-                # THIS RUNS THE ACTUAL GAME
                 game_result = game_loop.run()
                 
                 if not game_result['continue']:
@@ -184,7 +143,9 @@ class Game:
                 
                 print(f"[Game] Game over! Score: {game_result['game_state'].score}")
                 
+                # ==============================
                 # 5. END SCREEN
+                # ==============================
                 retry = show_end_screen(
                     self.screen,
                     game_result['game_state'],
@@ -196,10 +157,10 @@ class Game:
                 
                 if retry:
                     print("[Game] Player chose retry - going to wheel")
-                    continue  # Go back to wheel
+                    continue
                 else:
                     print("[Game] Player chose menu - going to start")
-                    continue  # Go back to start screen
+                    continue
                     
         finally:
             self.cleanup()
