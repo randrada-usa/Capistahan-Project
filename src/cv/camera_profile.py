@@ -54,7 +54,7 @@ class CameraProfile:
             'backup_landmark': 'middle_finger_base',
             
             # Camera settings for overhead lighting
-            'auto_exposure': 0.25,
+            'auto_exposure': 0.55,
             'manual_exposure': -4,
             'brightness': 150,
             'contrast': 128,

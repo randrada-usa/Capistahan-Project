@@ -48,10 +48,11 @@ class GameState:
         # Session tracking
         self.session_best_catch = None
         self.catches_by_rarity = {
+            'very_common': 0,
             'common': 0,
             'rare': 0,
             'ultra_rare': 0
-        }
+    }
         
         # Events for Jen (cleared each frame)
         self.catch_events = {
@@ -128,8 +129,8 @@ class GameState:
                 old_score = self.score
                 self.score += points
                 
-                # FIXED: Use .value to get string key for dictionary
-                rarity_key = item.rarity.value  # 'rare' instead of Rarity.RARE
+                # In handle_caught, update the tracking line:
+                rarity_key = item.rarity.value  # This now includes 'very_common'
                 self.catches_by_rarity[rarity_key] += 1
                 
                 # Track best single catch
