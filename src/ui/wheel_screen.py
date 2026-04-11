@@ -398,10 +398,13 @@ class WheelScreen:
 
 
 def show_wheel_screen(screen, screen_width=1920, screen_height=1080, 
-                     gesture_controller=None, assets=None, background=None):
+                     gesture_controller=None, assets=None, background=None,
+                     scale_func=None):
     clock = pygame.time.Clock()
     wheel = WheelScreen(screen_width, screen_height, assets, background)
     wheel.start()
+    
+    do_flip = scale_func if scale_func else lambda s: pygame.display.flip()
     
     while True:
         dt = clock.tick(60) / 1000
@@ -409,6 +412,11 @@ def show_wheel_screen(screen, screen_width=1920, screen_height=1080,
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 return None
+            
+            # HANDLE RESIZE
+            if event.type == pygame.VIDEORESIZE:
+                pygame.display.set_mode((event.w, event.h), pygame.RESIZABLE)
+                continue
             
             result = wheel.handle_event(event)
             if result == "quit":
@@ -427,7 +435,9 @@ def show_wheel_screen(screen, screen_width=1920, screen_height=1080,
         
         wheel.update(dt)
         wheel.draw(screen)
-        pygame.display.flip()
+        
+        # Scale and flip
+        do_flip(screen)
         
         if wheel.is_transitioning():
             return wheel.get_selected_category().value
