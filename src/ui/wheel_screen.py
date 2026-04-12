@@ -30,9 +30,9 @@ class WheelScreen:
         
         # Wheel configuration
         self.wheel_radius = 220          
-        self.icon_size = 280
+        self.icon_size = 350
         self.icon_distance = 1.3
-        self.wheel_scale = 0.6
+        self.wheel_scale = 0.9
         
         self.icon_angles = {
             Category.FOOD: -15,        
@@ -243,9 +243,6 @@ class WheelScreen:
         overlay.set_alpha(overlay_alpha)
         screen.blit(overlay, (0, 0))
         
-        # Title
-        title = self.font_large.render("SPIN THE WHEEL!", True, (255, 215, 0))
-        screen.blit(title, title.get_rect(center=(self.center_x, 170)))
         
         self._draw_wheel(screen)
         self._draw_pointer(screen)
@@ -302,7 +299,7 @@ class WheelScreen:
         angle = math.radians(300)
         
         # Distance from center - outside the wheel
-        distance = self.wheel_radius * self.current_scale * self.wheel_scale + 200
+        distance = self.wheel_radius * self.current_scale * self.wheel_scale + 300
         
         base_x = self.center_x + math.cos(angle) * distance
         base_y = self.center_y + math.sin(angle) * distance
@@ -398,10 +395,13 @@ class WheelScreen:
 
 
 def show_wheel_screen(screen, screen_width=1920, screen_height=1080, 
-                     gesture_controller=None, assets=None, background=None):
+                     gesture_controller=None, assets=None, background=None,
+                     scale_func=None):
     clock = pygame.time.Clock()
     wheel = WheelScreen(screen_width, screen_height, assets, background)
     wheel.start()
+    
+    do_flip = scale_func if scale_func else lambda s: pygame.display.flip()
     
     while True:
         dt = clock.tick(60) / 1000
@@ -409,6 +409,11 @@ def show_wheel_screen(screen, screen_width=1920, screen_height=1080,
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 return None
+            
+            # HANDLE RESIZE
+            if event.type == pygame.VIDEORESIZE:
+                pygame.display.set_mode((event.w, event.h), pygame.RESIZABLE)
+                continue
             
             result = wheel.handle_event(event)
             if result == "quit":
@@ -427,7 +432,9 @@ def show_wheel_screen(screen, screen_width=1920, screen_height=1080,
         
         wheel.update(dt)
         wheel.draw(screen)
-        pygame.display.flip()
+        
+        # Scale and flip
+        do_flip(screen)
         
         if wheel.is_transitioning():
             return wheel.get_selected_category().value
