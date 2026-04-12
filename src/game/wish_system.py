@@ -30,7 +30,7 @@ class WishSystem:
     THRESHOLD = 200
     
     # Win probability (0.0 to 1.0)
-    WIN_CHANCE = 0.05
+    WIN_CHANCE = 0.70
     
     # Code generation alphabet (no ambiguous chars: O/0, I/l)
     CODE_CHARS = 'ACDEFGHJKLMNPQRTUVWXYZ234679'
