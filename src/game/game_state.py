@@ -153,9 +153,12 @@ class GameState:
             if item.type == 'good':
                 # Base points from item rarity
                 base_points = item.get_score_value()
-                
-                # Apply category multiplier
                 points = int(base_points * self.multiplier)
+                self.score += points
+                
+                # Track catches
+                rarity_key = item.rarity.value
+                self.catches_by_rarity[rarity_key] = self.catches_by_rarity.get(rarity_key, 0) + 1
                 
                 # FIXED: Check milestone BEFORE adding score to detect threshold crossing
                 old_score = self.score
@@ -176,7 +179,13 @@ class GameState:
                     }
                 
                 # Fire rarity events for Jen
-                if item.rarity == Rarity.RARE:
+
+                if item.rarity == Rarity.WISH:
+                    self._trigger_event('wish_caught', {
+                    'points': points,
+                    'message': 'WISH ITEM! +100 Points!'
+                    })
+                elif item.rarity == Rarity.RARE:
                     self._trigger_event('rare_caught', {
                         'points': points,
                         'description': catch_desc

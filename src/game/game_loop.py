@@ -95,6 +95,8 @@ class PerlaHUD:
         if item.type == 'bad':
             self.set_expression('angry', 1.5)
             # No jump for bad items
+        elif item.rarity == Rarity.WISH:
+            self.set_expression('shock', 3.0)
         elif item.rarity == Rarity.ULTRA_RARE:
             self.set_expression('shock', 2.0)
             self.jump(15)  # Big jump

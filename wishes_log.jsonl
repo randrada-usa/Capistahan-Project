@@ -47,3 +47,7 @@
 {"timestamp": "2026-04-12T13:11:01.267535", "category": "food", "score": 295, "threshold": 200, "eligible": true, "won": true, "code": "9AVLVE", "prize_tier": "rare", "session_id": "CKXR"}
 {"timestamp": "2026-04-12T13:18:59.627692", "category": "people", "score": 325, "threshold": 200, "eligible": true, "won": true, "code": "7QYAL7", "prize_tier": "rare", "session_id": "96GF"}
 {"timestamp": "2026-04-12T13:20:15.147586", "category": "food", "score": 250, "threshold": 200, "eligible": true, "won": false, "code": null, "prize_tier": null, "session_id": "DP72"}
+{"timestamp": "2026-04-12T14:28:57.673286", "category": "culture", "score": 240, "threshold": 200, "eligible": true, "won": false, "code": null, "prize_tier": null, "session_id": "ZMVE"}
+{"timestamp": "2026-04-12T17:23:54.477493", "category": "food", "score": 470, "threshold": 200, "eligible": true, "won": true, "code": "7PWF3Y", "prize_tier": "rare", "session_id": "RGPQ"}
+{"timestamp": "2026-04-12T17:26:35.958045", "category": "people", "score": 636, "threshold": 200, "eligible": true, "won": true, "code": "RE6F2V", "prize_tier": "rare", "session_id": "HXLH"}
+{"timestamp": "2026-04-12T17:31:05.859775", "category": "culture", "score": 504, "threshold": 200, "eligible": true, "won": true, "code": "CCNHTJ", "prize_tier": "rare", "session_id": "TFCT"}

@@ -8,6 +8,7 @@ class Rarity(Enum):
     COMMON = "common"            # 10 pts
     RARE = "rare"                # 25 pts
     ULTRA_RARE = "ultra_rare"    # 50 pts
+    WISH = "wish"
 
 
 class FallingItem:
@@ -17,14 +18,16 @@ class FallingItem:
         Rarity.VERY_COMMON: 5,
         Rarity.COMMON: 10,
         Rarity.RARE: 25,
-        Rarity.ULTRA_RARE: 50
+        Rarity.ULTRA_RARE: 50,
+        Rarity.WISH:100
     }
     
     # Map rarities to glow sprite keys (from assets/effects/)
     GLOW_SPRITES = {
         Rarity.COMMON: 'common_glow',
         Rarity.RARE: 'rare_glow',
-        Rarity.ULTRA_RARE: 'ultra_rare_glow'
+        Rarity.ULTRA_RARE: 'ultra_rare_glow',
+        Rarity.WISH: 'wish_glow'
         # VERY_COMMON has no glow
     }
     
@@ -33,7 +36,8 @@ class FallingItem:
         Rarity.VERY_COMMON: 'ultracommon',
         Rarity.COMMON: 'common',
         Rarity.RARE: 'rare',
-        Rarity.ULTRA_RARE: 'ultrarare'
+        Rarity.ULTRA_RARE: 'ultrarare',
+        Rarity.WISH: 'wish'
     }
     
     def __init__(self, x, item_type, rarity, speed, asset_manager=None, theme_manager=None):
@@ -136,7 +140,8 @@ class ObjectManager:
         Rarity.VERY_COMMON: 0.35,  # 35%
         Rarity.COMMON: 0.40,       # 40%
         Rarity.RARE: 0.20,         # 20%
-        Rarity.ULTRA_RARE: 0.05    # 5%
+        Rarity.ULTRA_RARE: 0.05,
+        Rarity.WISH: 0.005   # 5%
     }
     
     MAX_VERY_COMMON_STREAK = 4
@@ -187,7 +192,9 @@ class ObjectManager:
         rarity = self._roll_rarity()
         
         # 70% good, 30% bad
-        if random.random() < 0.3:
+        if rarity == Rarity.WISH:
+            item_type = 'good'
+        elif random.random() < 0.3:
             item_type = 'bad'
             rarity = Rarity.VERY_COMMON
         else:
@@ -212,6 +219,10 @@ class ObjectManager:
             else:
                 item_type = 'good'
                 rarity = self._roll_rarity()
+
+                rarities = [Rarity.VERY_COMMON, Rarity.COMMON, Rarity.RARE, Rarity.ULTRA_RARE]
+                weights = [0.35, 0.40, 0.20, 0.05]
+                rarity = random.choices(rarities, weights=weights, k=1)[0]
             
             base_speed = random.uniform(4, 7)
 
@@ -230,7 +241,7 @@ class ObjectManager:
         self.game_time += dt
         
         # Difficulty scaling
-        time_level = int(self.game_time // 10)
+        time_level = int(self.game_time // 20)
         score_level = score // 50
         difficulty_level = (time_level // 2) + score_level
         

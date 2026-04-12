@@ -57,6 +57,11 @@ class AssetManager:
         self._load_shared('menu_button', os.path.join("ui", "menu_button.png"))
         self._load_shared('title1', os.path.join("ui", "title1.png"))
         self._load_shared('title2', os.path.join("ui", "title2.png"))
+
+
+        self._load_shared('wish_glow', os.path.join("effects", "wish_glow.png"), (130, 130))
+        self._load_shared('wish_item', os.path.join("sprites", "new_sprites", "wish.png"), (100, 100))
+        self._load_shared('wish_book', os.path.join("sprites", "new_sprites", "wish.png"), (100, 100))
         
         # --- GLOBAL EFFECTS (Glows) ---
         self._load_shared('common_glow', os.path.join("effects", "common_glow.png"), (130, 130))
