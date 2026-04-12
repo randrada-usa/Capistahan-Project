@@ -16,6 +16,51 @@
       "multiplier": 1.5
     },
     {
+      "score": 282,
+      "date": "2026-04-13 00:45",
+      "is_new": true,
+      "category": "people",
+      "category_display": "Capiz Community",
+      "best_catch": "Ultra Rare People",
+      "catches": {
+        "very_common": 3,
+        "common": 5,
+        "rare": 3,
+        "ultra_rare": 1
+      },
+      "multiplier": 1.5
+    },
+    {
+      "score": 270,
+      "date": "2026-04-13 00:47",
+      "is_new": true,
+      "category": "culture",
+      "category_display": "Capiz Traditions",
+      "best_catch": "Ultra Rare Culture",
+      "catches": {
+        "very_common": 5,
+        "common": 5,
+        "rare": 2,
+        "ultra_rare": 2
+      },
+      "multiplier": 1.2
+    },
+    {
+      "score": 265,
+      "date": "2026-04-13 00:43",
+      "is_new": true,
+      "category": "food",
+      "category_display": "Capiz Cuisine",
+      "best_catch": "Ultra Rare Food",
+      "catches": {
+        "very_common": 2,
+        "common": 8,
+        "rare": 5,
+        "ultra_rare": 1
+      },
+      "multiplier": 1.0
+    },
+    {
       "score": 259,
       "date": "2026-04-11 02:49",
       "is_new": true,
@@ -25,51 +70,6 @@
       "catches": {
         "very_common": 5,
         "common": 5,
-        "rare": 2,
-        "ultra_rare": 1
-      },
-      "multiplier": 1.5
-    },
-    {
-      "score": 210,
-      "date": "2026-04-11 03:38",
-      "is_new": true,
-      "category": "culture",
-      "category_display": "Capiz Traditions",
-      "best_catch": "Ultra Rare Culture",
-      "catches": {
-        "very_common": 1,
-        "common": 7,
-        "rare": 2,
-        "ultra_rare": 1
-      },
-      "multiplier": 1.2
-    },
-    {
-      "score": 207,
-      "date": "2026-04-10 02:30",
-      "is_new": true,
-      "category": "people",
-      "category_display": "Capiz Community",
-      "best_catch": "Rare People",
-      "catches": {
-        "very_common": 2,
-        "common": 3,
-        "rare": 4,
-        "ultra_rare": 0
-      },
-      "multiplier": 1.5
-    },
-    {
-      "score": 201,
-      "date": "2026-04-10 11:15",
-      "is_new": true,
-      "category": "people",
-      "category_display": "Capiz Community",
-      "best_catch": "Ultra Rare People",
-      "catches": {
-        "very_common": 1,
-        "common": 3,
         "rare": 2,
         "ultra_rare": 1
       },
