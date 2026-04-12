@@ -141,7 +141,7 @@ class ObjectManager:
         Rarity.COMMON: 0.40,       # 40%
         Rarity.RARE: 0.20,         # 20%
         Rarity.ULTRA_RARE: 0.05,
-        Rarity.WISH: 0.005   # 5%
+        Rarity.WISH: 0.01   # 5%
     }
     
     MAX_VERY_COMMON_STREAK = 4
