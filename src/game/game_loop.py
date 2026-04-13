@@ -357,7 +357,7 @@ class GameLoop:
             )
             self.screen.blit(progress_text, (bar_x, bar_y + 25))
         else:
-            wish_text = self.small_font.render("★ WISH READY! ★", True, (255, 215, 0))
+            wish_text = self.small_font.render("WISH READY!", True, (255, 215, 0))
             self.screen.blit(wish_text, (20, 340))
         
         # Hand lost warning - CENTERED AT TOP
