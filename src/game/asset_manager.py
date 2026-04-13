@@ -78,6 +78,28 @@ class AssetManager:
         self._load_shared('common_glow', os.path.join("effects", "common_glow.png"), (130, 130))
         self._load_shared('rare_glow', os.path.join("effects", "rare_glow.png"), (130, 130))
         self._load_shared('ultra_rare_glow', os.path.join("effects", "ultra_rare_glow.png"), (130, 130))
+
+        # --- THEME-SPECIFIC PLAYER SPRITES
+        # Left direction frames
+        self._load_themed('new_sprite_left', 
+                         os.path.join("sprites", "new_sprites", "new_sprite_left.png"), 
+                         target_size=(260, 380))
+        self._load_themed('new_sprite_left_extend', 
+                         os.path.join("sprites", "new_sprites", "new_sprite_left_extend.png"), 
+                         target_size=(260, 380))
+        
+        # Right direction frames  
+        self._load_themed('new_sprite_right', 
+                         os.path.join("sprites", "new_sprites", "new_sprite_right.png"), 
+                         target_size=(260, 380))
+        self._load_themed('new_sprite_right_extend', 
+                         os.path.join("sprites", "new_sprites", "new_sprite_right_extend.png"), 
+                         target_size=(260, 380))
+        
+        # Idle frame
+        self._load_themed('new_sprite_default', 
+                         os.path.join("sprites", "new_sprites", "new_sprite(default).png"), 
+                         target_size=(260, 380))
         
         # --- SHARED START/END SCREEN BACKGROUND ---
         self._load_shared('start_background', os.path.join("backgrounds", "people_bg.png"), target_size=(1920, 1080))
