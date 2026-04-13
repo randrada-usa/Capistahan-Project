@@ -53,8 +53,8 @@ class AssetManager:
         
         # --- UI ASSETS ---
         self._load_shared('start_button', os.path.join("ui", "start_button2.png"))
-        self._load_shared('retry_button', os.path.join("ui", "retry_button.png"))
-        self._load_shared('menu_button', os.path.join("ui", "menu_button.png"))
+        self._load_shared('retry_button', os.path.join("ui", "retry_button2.png"))
+        self._load_shared('menu_button', os.path.join("ui", "back_button2.png"))
         self._load_shared('title2', os.path.join("ui", "WAVE&WISH.png"))
 
 
