@@ -62,6 +62,20 @@ class PerlaHUD:
             'angry': self._load_sprite('1angry_perla')       # Bad
         }
         
+        # === CATEGORY-SPECIFIC EXPRESSION MAPPING ===
+        # Override with theme-specific expression sprites if available
+        theme_expressions = {
+            'shock': f'{self.theme}_shock',      # Ultra Rare / Wish
+            'smiley': f'{self.theme}_happy',       # Rare (happy as smiley)
+            'happy': f'{self.theme}_happy',        # Common/Very Common
+            'angry': f'{self.theme}_angry'         # Bad items
+        }
+        
+        for expr_name, asset_name in theme_expressions.items():
+            themed_sprite = self.assets.get(asset_name)
+            if themed_sprite is not None:
+                self.sprites[expr_name] = pygame.transform.scale(themed_sprite, (250, 250))
+        
         # Fallback to default if specific not found
         for key in self.sprites:
             if self.sprites[key] is None:
@@ -95,6 +109,8 @@ class PerlaHUD:
         if item.type == 'bad':
             self.set_expression('angry', 1.5)
             # No jump for bad items
+        elif item.rarity == Rarity.WISH:
+            self.set_expression('shock', 3.0)
         elif item.rarity == Rarity.ULTRA_RARE:
             self.set_expression('shock', 2.0)
             self.jump(15)  # Big jump
@@ -355,7 +371,7 @@ class GameLoop:
             )
             self.screen.blit(progress_text, (bar_x, bar_y + 25))
         else:
-            wish_text = self.small_font.render("★ WISH READY! ★", True, (255, 215, 0))
+            wish_text = self.small_font.render("WISH READY!", True, (255, 215, 0))
             self.screen.blit(wish_text, (20, 340))
         
         # Hand lost warning - CENTERED AT TOP

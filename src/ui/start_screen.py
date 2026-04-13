@@ -177,14 +177,14 @@ class StartScreen:
 
         if self.start_button:
             orig_w, orig_h = self.start_button.get_size()
-            self.button_scale = 0.4 
+            self.button_scale = 0.7 
             self.start_button = pygame.transform.smoothscale(
                 self.start_button, 
                 (int(orig_w * self.button_scale), int(orig_h * self.button_scale))
             )
 
         padding = 10
-        vertical_offset = -100
+        vertical_offset = -50
         
         title_h = self.title_img.get_height() if self.title_img else 200
         btn_h = self.start_button.get_height() if self.start_button else 150
@@ -255,8 +255,12 @@ class StartScreen:
             screen.blit(self.background, (0, 0))
         else:
             screen.fill((235, 220, 207))
-            
+
         self.falling.render(screen)
+            
+        
+        if self.title_img:
+                screen.blit(self.title_img, self.title_rect)
         
         if self.start_button:
             if self.button_hovering:

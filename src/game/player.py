@@ -1,6 +1,7 @@
 """
 player.py - MODIFIED FOR CAPIZTAHAN
 Removed: Expression system (moved to Perla HUD)
+Added: 2-frame walk animation (switches every 5px)
 """
 
 import pygame
@@ -21,16 +22,20 @@ class Player:
         self.frozen = False
         
         # Sprite dimensions
-        self.width = 140
-        self.height = 150
+        self.width = 380
+        self.height = 260
         self.facing = 'idle'
-        self.move_threshold = 40
+        self.move_threshold = 40  # Changed from 40 to 10 as requested
         self.sprite_offset_y = 30
         
         # Basket hitbox
         self.basket_width = 70
         self.basket_height = 40
         self.basket_offset_y = 175
+        
+        # NEW: 2-frame animation variables
+        self.walk_frame = 0  # 0 or 1
+        self.distance_accumulator = 0.0
         
     def set_target_x(self, x):
         """Set target position."""
@@ -53,28 +58,45 @@ class Player:
         pass
     
     def update(self, dt):
-        """Update movement only."""
+        """Update movement and animation frame."""
         if not self.frozen:
             diff = self.target_x - self.x
             
+            # Determine facing direction (threshold: 10px)
             if diff < -self.move_threshold:
-                self.facing = 'left'
+                new_facing = 'left'
             elif diff > self.move_threshold:
-                self.facing = 'right'
+                new_facing = 'right'
             else:
-                self.facing = 'idle'
+                new_facing = 'idle'
             
-            self.x += diff * self.lerp_speed
+            # Reset animation when stopping or changing direction
+            if new_facing == 'idle' or new_facing != self.facing:
+                self.walk_frame = 0
+                self.distance_accumulator = 0
+            
+            self.facing = new_facing
+            
+            # Move player
+            movement = diff * self.lerp_speed
+            self.x += movement
+            
+            # NEW: Track distance for frame animation (toggle every 20px)
+            if self.facing != 'idle':
+                self.distance_accumulator += abs(movement)
+                if self.distance_accumulator >= 20:
+                    self.walk_frame = 1 - self.walk_frame  # Toggle 0 <-> 1
+                    self.distance_accumulator = 0
     
     def render(self, screen):
-        """Draw player sprite without expression effects."""
-        # Sprite selection
+        """Draw player sprite with 2-frame animation."""
+        # NEW: Select sprite based on facing and animation frame
         if self.facing == 'left':
-            sprite_key = 'sprite_left'
+            sprite_key = 'new_sprite_left' if self.walk_frame == 0 else 'new_sprite_left_extend'
         elif self.facing == 'right':
-            sprite_key = 'sprite_right'
+            sprite_key = 'new_sprite_right' if self.walk_frame == 0 else 'new_sprite_right_extend'
         else:
-            sprite_key = 'sprite_idle'
+            sprite_key = 'new_sprite_default'
         
         sprite = self.assets.get(sprite_key) if self.assets else None
         
@@ -123,3 +145,6 @@ class Player:
         self.target_x = self.x
         self.frozen = False
         self.facing = 'idle'
+        # NEW: Reset animation
+        self.walk_frame = 0
+        self.distance_accumulator = 0
