@@ -53,15 +53,53 @@ class AssetManager:
         
         # --- UI ASSETS ---
         self._load_shared('start_button', os.path.join("ui", "start_button2.png"))
-        self._load_shared('retry_button', os.path.join("ui", "retry_button2.png"))
-        self._load_shared('menu_button', os.path.join("ui", "menu_button2.png"))
-        self._load_shared('title1', os.path.join("ui", "title1.png"))
+        self._load_shared('retry_button', os.path.join("ui", "retry_button.png"))
+        self._load_shared('menu_button', os.path.join("ui", "menu_button.png"))
         self._load_shared('title2', os.path.join("ui", "WAVE&WISH.png"))
+
+
+        self._load_shared('wish_glow', os.path.join("effects", "wish_glow.png"), (130, 130))
+        self._load_shared('wish_item', os.path.join("sprites", "new_sprites", "wish.png"), (100, 100))
+        self._load_shared('wish_book', os.path.join("sprites", "new_sprites", "wish.png"), (100, 100))
+
+        self._load_shared('culture_angry', os.path.join("culture", "sprites", "culture_angry.png"), (250, 250))
+        self._load_shared('culture_happy', os.path.join("culture", "sprites", "culture_happy.png"), (250, 250))
+        self._load_shared('culture_shock', os.path.join("culture", "sprites", "culture_shock.png"), (250, 250))
+
+        self._load_shared('food_angry', os.path.join("food", "sprites", "food_angry.png"), (250, 250))
+        self._load_shared('food_happy', os.path.join("food", "sprites", "food_happy.png"), (250, 250))
+        self._load_shared('food_shock', os.path.join("food", "sprites", "food_shock.png"), (250, 250))
+
+        self._load_shared('people_angry', os.path.join("people", "sprites", "people_angry.png"), (250, 250))
+        self._load_shared('people_happy', os.path.join("people", "sprites", "people_happy.png"), (250, 250))
+        self._load_shared('people_shock', os.path.join("people", "sprites", "people_shock.png"), (250, 250))
         
         # --- GLOBAL EFFECTS (Glows) ---
         self._load_shared('common_glow', os.path.join("effects", "common_glow.png"), (130, 130))
         self._load_shared('rare_glow', os.path.join("effects", "rare_glow.png"), (130, 130))
         self._load_shared('ultra_rare_glow', os.path.join("effects", "ultra_rare_glow.png"), (130, 130))
+
+        # --- THEME-SPECIFIC PLAYER SPRITES
+        # Left direction frames
+        self._load_themed('new_sprite_left', 
+                         os.path.join("sprites", "new_sprites", "new_sprite_left.png"), 
+                         target_size=(260, 380))
+        self._load_themed('new_sprite_left_extend', 
+                         os.path.join("sprites", "new_sprites", "new_sprite_left_extend.png"), 
+                         target_size=(260, 380))
+        
+        # Right direction frames  
+        self._load_themed('new_sprite_right', 
+                         os.path.join("sprites", "new_sprites", "new_sprite_right.png"), 
+                         target_size=(260, 380))
+        self._load_themed('new_sprite_right_extend', 
+                         os.path.join("sprites", "new_sprites", "new_sprite_right_extend.png"), 
+                         target_size=(260, 380))
+        
+        # Idle frame
+        self._load_themed('new_sprite_default', 
+                         os.path.join("sprites", "new_sprites", "new_sprite(default).png"), 
+                         target_size=(260, 380))
         
         # --- SHARED START/END SCREEN BACKGROUND ---
         self._load_shared('start_background', os.path.join("backgrounds", "people_bg.png"), target_size=(1920, 1080))
