@@ -1,3 +1,9 @@
+"""
+player.py - MODIFIED FOR CAPIZTAHAN
+Removed: Expression system (moved to Perla HUD)
+Added: 2-frame walk animation (switches every 5px)
+"""
+
 import pygame
 import math
 
@@ -8,35 +14,31 @@ class Player:
         self.screen_height = screen_height
         self.assets = asset_manager
         
-        # Position (fixed Y per Gio's spec)
+        # Position
         self.x = screen_width // 2
         self.y = 970
-        
-        # Lerp smoothing
         self.lerp_speed = 0.15
         self.target_x = self.x
-        
-        # Freeze state for hand loss
         self.frozen = False
         
         # Sprite dimensions
-        self.width = 140
-        self.height = 150
-        
-        # Direction tracking: idle, left, right
+        self.width = 380
+        self.height = 260
         self.facing = 'idle'
-        self.move_threshold = 40  # px difference before sprite switches direction
-        
-        # Visual offset
+        self.move_threshold = 40  # Changed from 40 to 10 as requested
         self.sprite_offset_y = 30
-
-        # Basket hitbox 
-        self.basket_width = 70   
-        self.basket_height = 40  
+        
+        # Basket hitbox
+        self.basket_width = 70
+        self.basket_height = 40
         self.basket_offset_y = 175
         
+        # NEW: 2-frame animation variables
+        self.walk_frame = 0  # 0 or 1
+        self.distance_accumulator = 0.0
+        
     def set_target_x(self, x):
-        """Called by GestureController - x is screen coordinate or None"""
+        """Set target position."""
         if x is None:
             self.freeze()
         else:
@@ -46,39 +48,58 @@ class Player:
             self.target_x = max(margin, min(x, self.screen_width - margin))
     
     def freeze(self):
-        """Hand lost - stop lerping, hold position"""
         self.frozen = True
     
     def unfreeze(self):
-        """Hand found - resume normal movement"""
         self.frozen = False
     
+    def set_expression(self, expression, duration=0.5):
+        """DEPRECATED: Expressions moved to Perla HUD."""
+        pass
+    
     def update(self, dt):
-        """Update position with lerp smoothing."""
+        """Update movement and animation frame."""
         if not self.frozen:
             diff = self.target_x - self.x
-
-            # Only switch sprite if movement exceeds threshold
+            
+            # Determine facing direction (threshold: 10px)
             if diff < -self.move_threshold:
-                self.facing = 'left'
+                new_facing = 'left'
             elif diff > self.move_threshold:
-                self.facing = 'right'
+                new_facing = 'right'
             else:
-                self.facing = 'idle'  # Within threshold = show normal sprite
-
-            self.x += diff * self.lerp_speed
+                new_facing = 'idle'
+            
+            # Reset animation when stopping or changing direction
+            if new_facing == 'idle' or new_facing != self.facing:
+                self.walk_frame = 0
+                self.distance_accumulator = 0
+            
+            self.facing = new_facing
+            
+            # Move player
+            movement = diff * self.lerp_speed
+            self.x += movement
+            
+            # NEW: Track distance for frame animation (toggle every 20px)
+            if self.facing != 'idle':
+                self.distance_accumulator += abs(movement)
+                if self.distance_accumulator >= 20:
+                    self.walk_frame = 1 - self.walk_frame  # Toggle 0 <-> 1
+                    self.distance_accumulator = 0
     
     def render(self, screen):
-        """Draw player sprite based on movement direction."""
+        """Draw player sprite with 2-frame animation."""
+        # NEW: Select sprite based on facing and animation frame
         if self.facing == 'left':
-            sprite_key = 'sprite_left'
+            sprite_key = 'new_sprite_left' if self.walk_frame == 0 else 'new_sprite_left_extend'
         elif self.facing == 'right':
-            sprite_key = 'sprite_right'
+            sprite_key = 'new_sprite_right' if self.walk_frame == 0 else 'new_sprite_right_extend'
         else:
-            sprite_key = 'sprite_idle'
-
+            sprite_key = 'new_sprite_default'
+        
         sprite = self.assets.get(sprite_key) if self.assets else None
-
+        
         if sprite:
             rect = sprite.get_rect()
             rect.centerx = int(self.x)
@@ -86,13 +107,14 @@ class Player:
             screen.blit(sprite, rect)
         else:
             # Fallback rectangle
+            color = (100, 200, 255)
             rect = pygame.Rect(
                 self.x - self.width // 2,
                 self.y - self.height // 2,
                 self.width,
                 self.height
             )
-            pygame.draw.rect(screen, (100, 200, 255), rect, border_radius=10)
+            pygame.draw.rect(screen, color, rect, border_radius=10)
             pygame.draw.rect(screen, (255, 255, 255), rect, width=2, border_radius=10)
         
         # Hand lost indicator
@@ -108,7 +130,7 @@ class Player:
             screen.blit(text, text_rect)
     
     def get_hitbox(self):
-        """Hitbox positioned at the basket (top of sprite)."""
+        """Return basket hitbox."""
         basket_y = self.y - self.basket_offset_y
         return pygame.Rect(
             self.x - self.basket_width // 2,
@@ -117,6 +139,12 @@ class Player:
             self.basket_height
         )
     
-    def get_hitbox_visual(self):
-        """Optional: draw hitbox for debugging."""
-        return self.get_hitbox()
+    def reset(self):
+        """Reset position."""
+        self.x = self.screen_width // 2
+        self.target_x = self.x
+        self.frozen = False
+        self.facing = 'idle'
+        # NEW: Reset animation
+        self.walk_frame = 0
+        self.distance_accumulator = 0

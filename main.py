@@ -1,6 +1,6 @@
 """
 main.py
-GameFrick Project - Production Version with Persistent Camera Feed
+Capiztahan Gacha Game - Main Entry Point (RESIZABLE VERSION)
 """
 
 import sys
@@ -8,15 +8,14 @@ import os
 import pygame
 import cv2
 
-# Ensure the script can find the src directory
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from src.ui.start_screen import show_start_screen
-from src.ui.end_screen import show_end_screen 
+from src.ui.wheel_screen import show_wheel_screen
+from src.ui.end_screen import show_end_screen
 from src.game.asset_manager import AssetManager
-from src.game.player import Player
-from src.game.falling_objects import ObjectManager
-from src.game.game_state import GameState
+from src.game.theme_manager import ThemeManager
+from src.game.game_loop import GameLoop
 
 try:
     from src.cv.gesture_controller import GestureController
@@ -26,19 +25,64 @@ except ImportError as e:
     CV_AVAILABLE = False
 
 
+def scale_and_flip(virtual_surface):
+    """
+    Scale virtual 1920x1080 surface to fit actual window while maintaining 16:9 aspect ratio.
+    """
+    actual_surface = pygame.display.get_surface()
+    if actual_surface is None:
+        pygame.display.flip()
+        return
+    
+    actual_w, actual_h = actual_surface.get_size()
+    virtual_w, virtual_h = 1920, 1080
+    
+    # Calculate scale to fit while maintaining aspect ratio
+    scale = min(actual_w / virtual_w, actual_h / virtual_h)
+    new_w = int(virtual_w * scale)
+    new_h = int(virtual_h * scale)
+    
+    # Center on screen
+    x = (actual_w - new_w) // 2
+    y = (actual_h - new_h) // 2
+    
+    # Scale using smoothscale for better quality
+    if (new_w, new_h) != (virtual_w, virtual_h):
+        scaled = pygame.transform.smoothscale(virtual_surface, (new_w, new_h))
+    else:
+        scaled = virtual_surface
+    
+    # Fill with black
+    actual_surface.fill((0, 0, 0))
+    actual_surface.blit(scaled, (x, y))
+    pygame.display.flip()
+
+
 class Game:
     def __init__(self):
         pygame.init()
         pygame.mixer.init()
-
-        # Resolution for a professional 1080p experience
-        self.screen_w = 1920
-        self.screen_h = 1080
-        self.fps = 60
         
-        self.screen = pygame.display.set_mode((self.screen_w, self.screen_h))
-        pygame.display.set_caption("BREAD RUSH - GAMEFRICKS PROTOTYPE01")
-        self.clock = pygame.time.Clock()
+        # Virtual resolution (internal game coordinates - ALWAYS 1920x1080)
+        self.virtual_w = 1920
+        self.virtual_h = 1080
+        
+        # Start with a smaller window so user can resize (1280x720 is good for 2560x1600)
+        # It will scale up to fill the space with black bars if needed
+        initial_window_w = 1280
+        initial_window_h = 720
+        
+        print(f"[DEBUG] Creating window at {initial_window_w}x{initial_window_h} (resizable)")
+        print(f"[DEBUG] Internal resolution: {self.virtual_w}x{self.virtual_h} (fixed)")
+        
+        self.screen = pygame.display.set_mode(
+            (initial_window_w, initial_window_h), 
+            pygame.RESIZABLE
+        )
+        pygame.display.set_caption("CAPIZTAHAN GACHA - Drag edges to resize!")
+        
+        # Virtual surface - everything renders here at 1920x1080
+        self.virtual_screen = pygame.Surface((self.virtual_w, self.virtual_h))
         
         icon_path = os.path.join(os.path.dirname(__file__), 'Icon.ico')
         if os.path.exists(icon_path):
@@ -46,222 +90,152 @@ class Game:
                 icon_surface = pygame.image.load(icon_path)
                 pygame.display.set_icon(icon_surface)
             except Exception as e:
-                print(f"[WARNING] Failed to load window icon: {e}")
+                print(f"[WARNING] Failed to load icon: {e}")
 
-        print("Loading assets...")
-        # AssetManager handles path fixes for PyInstaller internally
-        self.assets = AssetManager().load_all()
-        
+        # CV setup
         self.gesture_controller = None
         self.use_cv = False
-        self.debug_window = True  # Enabled by default for interactive demo
-        
-        self.font_large = pygame.font.Font(None, 74)
-        self.font_small = pygame.font.Font(None, 36)
-        
-        self.hand_lost_timer = 0
-        self.running = True
+        self.camera_profile = os.environ.get('CAMERA_PROFILE', 'high_angle')
+        print(f"[Game] Camera profile: {self.camera_profile}")
 
-        # Initialize the CV window early so it can be moved to a second monitor
         if CV_AVAILABLE:
             cv2.namedWindow("GAMEFRICKS PROTOTYPE01 - Camera Feed", cv2.WINDOW_NORMAL)
             
-        # START CAMERA IMMEDIATELY so it's available on all screens
         self.init_cv()
-
-    def reset_game(self):
-        """Reset game state for new game round."""
-        self.player = Player(self.screen_w, self.screen_h, self.assets)
-        self.object_manager = ObjectManager(self.screen_w, self.assets)
-        self.game_state = GameState(self.assets)
-        self.hand_lost_timer = 0
         
-        # Load and play background music
-        if 'ingame' in self.assets.music_paths:
-            pygame.mixer.music.load(self.assets.music_paths['ingame'])
-            pygame.mixer.music.play(-1, fade_ms=2000)
+        # Theme/Assets set after wheel
+        self.theme_manager = None
+        self.assets = None
+        self.running = True
         
-        if self.gesture_controller:
-            self.gesture_controller.reset()
-
+        # Load wheel assets once (shared across all screens)
+        print("[Game] Loading wheel assets...")
+        self.wheel_assets = AssetManager().load_all()
+    
     def init_cv(self):
-        """Initialize Gesture Controller immediately on game load."""
-        if CV_AVAILABLE and not self.gesture_controller:
+        """Initialize Gesture Controller."""
+        if CV_AVAILABLE:
             try:
-                self.gesture_controller = GestureController().start()
+                self.gesture_controller = GestureController(
+                    camera_profile=self.camera_profile
+                ).start()
                 self.use_cv = True
-                print("[Game] CV mode active - Camera running for all screens")
+                print(f"[Game] CV active with '{self.camera_profile}' profile")
             except Exception as e:
                 print(f"[Game] CV failed: {e}")
+                import traceback
+                traceback.print_exc()
                 self.use_cv = False
 
-    def handle_events(self):
-        """Standard Pygame event handling."""
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                self.running = False
-                return False
-            if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_ESCAPE:
-                    self.running = False
-                    return False
-                # Press 'D' to toggle the Hand Tracking window
-                if event.key == pygame.K_d:
-                    self.debug_window = not self.debug_window
-                    if not self.debug_window:
-                        cv2.destroyWindow("GAMEFRICKS PROTOTYPE01 - Camera Feed")
-                    else:
-                        cv2.namedWindow("GAMEFRICKS PROTOTYPE01 - Camera Feed", cv2.WINDOW_NORMAL)
-        return True
-
-    def update(self):
-        """Update game logic, physics, and CV input."""
-        if self.game_state.game_over:
-            return None, None
-        
-        player_x = None
-        if self.use_cv and self.gesture_controller:
-            # GestureController.update() now handles single-poll frame reading
-            player_x = self.gesture_controller.update()
-            
-            if player_x is None:
-                self.hand_lost_timer += 0.016
-            else:
-                self.hand_lost_timer = max(0, self.hand_lost_timer - 0.032)
-        else:
-            # Fallback to mouse if CV is disabled
-            player_x, _ = pygame.mouse.get_pos()
-
-        # Update player position with smoothing
-        self.player.set_target_x(player_x)
-        self.player.update(1/60)
-        
-        # Update falling objects (speed increases with score)
-        self.object_manager.update(1/60, self.game_state.score)
-        
-        # Collision detection
-        caught, missed_good = self.object_manager.check_collisions(self.player.get_hitbox())
-        
-        # Update Game State (Score, SFX, Lives)
-        self.game_state.handle_caught(caught)
-        self.game_state.handle_missed_good(missed_good)
-        self.game_state.check_game_over()
-        
-        return player_x, self.player.y
-
-    def render(self, player_x, player_y):
-        """Render all graphics and the separate CV window."""
-        # Draw Background
-        bg = self.assets.get('background')
-        if bg:
-            self.screen.blit(bg, (0, 0))
-        else:
-            self.screen.fill((30, 30, 40))
-        
-        # Render Game Objects
-        self.object_manager.render(self.screen)
-        self.player.render(self.screen)
-        self._draw_hud()
-
-        # Draw Wood Borders (Decorative/Gameplay limit)
-        BORDER_WIDTH = 195
-        border_color = (40, 20, 10)
-        pygame.draw.rect(self.screen, border_color, (0, 0, BORDER_WIDTH, self.screen_h))
-        pygame.draw.rect(self.screen, border_color, (self.screen_w - BORDER_WIDTH, 0, BORDER_WIDTH, self.screen_h))
-
-        # Update main Pygame display
-        pygame.display.flip()
-
-        # Update the external Camera window (during gameplay)
-        self._update_cv_window()
-
-    def _update_cv_window(self):
-        """Update the OpenCV debug window if enabled."""
-        if self.debug_window and self.use_cv and self.gesture_controller:
-            debug_frame = self.gesture_controller.get_debug_frame()
-            if debug_frame is not None:
-                cv2.imshow("GAMEFRICKS PROTOTYPE01 - Camera Feed", debug_frame)
-                # waitKey(1) is required to process the window draw and mouse events
-                cv2.waitKey(1)
-
-    def _draw_hud(self):
-        """Draws Score, High Score, and Heart (Health) Sprites."""
-        # Score UI
-        score_text = self.font_large.render(f"Score: {self.game_state.score}", True, (255, 255, 255))
-        self.screen.blit(score_text, (self.screen_w - 550, 80))
-        
-        high_text = self.font_small.render(f"Best: {self.game_state.high_score}", True, (150, 75, 0))
-        self.screen.blit(high_text, (self.screen_w - 550, 135))
-        
-        # Health heart sprite (H1-H6)
-        hp_index = max(1, min(6, self.game_state.lives))
-        health_sprite = self.assets.get(f'h{hp_index}')
-        if health_sprite:
-            self.screen.blit(health_sprite, (230, 80))
-
-        # Hand Lost Warning
-        if self.hand_lost_timer > 0.1:
-            if (pygame.time.get_ticks() // 200) % 2 == 0:
-                warning = self.font_large.render("! HAND LOST !", True, (255, 50, 50))
-                self.screen.blit(warning, warning.get_rect(center=(self.screen_w // 2, 100)))
-
     def run(self):
-        """The main execution flow with persistent camera."""
+        """Main game flow."""
         try:
             while self.running:
-                # 1. Start Screen Menu (Camera is already running!)
-                # Pass gesture_controller so it can update the CV window
-                if not show_start_screen(self.screen, self.screen_w, self.screen_h, 
-                                       gesture_controller=self.gesture_controller if self.use_cv else None):
-                    self.running = False
+                # Handle global quit/resize
+                for event in pygame.event.get([pygame.QUIT, pygame.VIDEORESIZE]):
+                    if event.type == pygame.QUIT:
+                        print("[DEBUG] Global QUIT event")
+                        return
+                    elif event.type == pygame.VIDEORESIZE:
+                        print(f"[DEBUG] Resize to {event.w}x{event.h}")
+                        self.screen = pygame.display.set_mode(
+                            (event.w, event.h), 
+                            pygame.RESIZABLE
+                        )
+                
+                # 1. START SCREEN
+                print("[Game] Showing start screen...")
+                result, start_screen_snapshot = show_start_screen(
+                    self.virtual_screen,
+                    self.virtual_w, 
+                    self.virtual_h,
+                    gesture_controller=self.gesture_controller if self.use_cv else None,
+                    scale_func=scale_and_flip
+                )
+                
+                if not result:
+                    print("[Game] User quit from start screen")
                     break
-
-                # 2. Reset Game Logic (CV already initialized)
-                self.reset_game()
-                game_active = True
-
-                # 3. Gameplay Loop
-                while game_active and self.running:
-                    if not self.handle_events():
-                        break
+                
+                # 2. WHEEL SCREEN
+                print("[Game] Showing wheel screen...")
+                selected_theme = show_wheel_screen(
+                    self.virtual_screen,
+                    self.virtual_w,
+                    self.virtual_h,
+                    gesture_controller=self.gesture_controller if self.use_cv else None,
+                    assets=self.wheel_assets,
+                    background=start_screen_snapshot,
+                    scale_func=scale_and_flip
+                )
+                
+                if selected_theme is None:
+                    print("[Game] User quit from wheel")
+                    break
+                
+                print(f"[Game] Selected theme: {selected_theme}")
+                
+                # 3. LOAD THEME-SPECIFIC ASSETS
+                try:
+                    self.theme_manager = ThemeManager(selected_theme)
+                    self.assets = AssetManager(selected_theme).load_all()
+                except Exception as e:
+                    print(f"[Game] Error loading assets: {e}")
+                    continue
+                
+                # 4. GAMEPLAY LOOP
+                print("[Game] Starting gameplay loop...")
+                game_loop = GameLoop(
+                    screen=self.virtual_screen,
+                    assets=self.assets,
+                    theme_manager=self.theme_manager,
+                    gesture_controller=self.gesture_controller,
+                    use_cv=self.use_cv,
+                    scale_func=scale_and_flip
+                )
+                
+                game_result = game_loop.run()
+                
+                print(f"[DEBUG] Game loop result: continue={game_result['continue']}")
+                
+                if not game_result['continue']:
+                    print("[Game] User quit during gameplay")
+                    break
+                
+                print(f"[Game] Game over! Score: {game_result['game_state'].score}")
+                
+                # 5. END SCREEN
+                retry = show_end_screen(
+                    self.virtual_screen,
+                    game_result['game_state'],
+                    background_snapshot=game_result['snapshot'],
+                    screen_width=self.virtual_w,
+                    screen_height=self.virtual_h,
+                    gesture_controller=self.gesture_controller if self.use_cv else None,
+                    scale_func=scale_and_flip
+                )
+                
+                if retry:
+                    print("[Game] Player chose retry - going to wheel")
+                    continue
+                else:
+                    print("[Game] Player chose menu - going to start")
+                    continue
                     
-                    p_x, p_y = self.update()
-                    self.render(p_x, p_y)
-                    self.clock.tick(self.fps)
-                    
-                    if self.game_state.game_over:
-                        game_active = False
-
-                # 4. Game Over Screen (Camera stays on!)
-                if self.running:
-                    pygame.mixer.music.fadeout(1000)
-                    snapshot = self.screen.copy() # Background for end screen blur effect
-                    
-                    # Pass gesture_controller to keep camera feed live
-                    retry = show_end_screen(
-                        self.screen,
-                        self.game_state.score,
-                        self.game_state.high_score,
-                        self.game_state.is_new_high_score(),
-                        snapshot,
-                        self.screen_w,
-                        self.screen_h,
-                        gesture_controller=self.gesture_controller if self.use_cv else None
-                    )
-                    
-                    if not retry:
-                        # Return to Start Screen (loop continues, camera stays on)
-                        pass 
-
+        except Exception as e:
+            print(f"[DEBUG] ERROR: {e}")
+            import traceback
+            traceback.print_exc()
         finally:
             self.cleanup()
-
+    
     def cleanup(self):
-        """Safely shut down camera and Pygame."""
+        """Safely shut down."""
         if self.gesture_controller:
             self.gesture_controller.stop()
         cv2.destroyAllWindows()
         pygame.quit()
+        sys.exit()
 
 
 if __name__ == "__main__":
