@@ -184,7 +184,7 @@ class StartScreen:
             )
 
         padding = 10
-        vertical_offset = -50
+        vertical_offset = 10
         
         title_h = self.title_img.get_height() if self.title_img else 200
         btn_h = self.start_button.get_height() if self.start_button else 150
