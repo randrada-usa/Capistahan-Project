@@ -47,6 +47,21 @@
       "multiplier": 1.5
     },
     {
+      "score": 744,
+      "date": "2026-04-13 20:52",
+      "is_new": true,
+      "category": "people",
+      "category_display": "Capiz Community",
+      "best_catch": "Ultra Rare People",
+      "catches": {
+        "very_common": 6,
+        "common": 12,
+        "rare": 6,
+        "ultra_rare": 4
+      },
+      "multiplier": 1.5
+    },
+    {
       "score": 684,
       "date": "2026-04-12 17:48",
       "is_new": true,
@@ -59,21 +74,6 @@
         "rare": 12,
         "ultra_rare": 0,
         "wish": 2
-      },
-      "multiplier": 1.2
-    },
-    {
-      "score": 672,
-      "date": "2026-04-13 17:31",
-      "is_new": true,
-      "category": "culture",
-      "category_display": "Capiz Traditions",
-      "best_catch": "Rare Culture",
-      "catches": {
-        "very_common": 16,
-        "common": 18,
-        "rare": 12,
-        "ultra_rare": 0
       },
       "multiplier": 1.2
     }

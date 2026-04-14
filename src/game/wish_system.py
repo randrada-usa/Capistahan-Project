@@ -36,13 +36,6 @@ class WishSystem:
     CODE_CHARS = 'ACDEFGHJKLMNPQRTUVWXYZ234679'
     CODE_LENGTH = 6
     
-    # Prize tiers (v1: all wins = Gift Box / Rare tier)
-    PRIZE_TIERS = {
-        'common': {'name': 'Sticker Pack', 'weight': 0},
-        'rare': {'name': 'Gift Box', 'weight': 100},  # 100% of wins for now
-        'ultra': {'name': 'Limited Shirt', 'weight': 0}
-    }
-    
     # Log file for analytics
     LOG_FILE = "wishes_log.jsonl"
     
@@ -84,15 +77,11 @@ class WishSystem:
     def _generate_win(self, score):
         """Create win result with code and logging."""
         code = self._generate_code()
-        tier = self._select_prize_tier()
         
         result = {
             'eligible': True,
             'won': True,
             'code': code,
-            'prize_tier': tier,
-            'prize_name': self.PRIZE_TIERS[tier]['name'],
-            'message': f'You won a {self.PRIZE_TIERS[tier]["name"]}!',
             'verification_code': code,
             'instructions': 'Show this code to the 6-byte Studios booth staff.',
             'booth_location': 'Capiztahan Main Stage'
