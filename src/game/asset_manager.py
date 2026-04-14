@@ -75,9 +75,9 @@ class AssetManager:
         self._load_shared('people_shock', os.path.join("people", "sprites", "people_shock.png"), (250, 250))
         
         # --- GLOBAL EFFECTS (Glows) ---
-        self._load_shared('common_glow', os.path.join("effects", "common_glow.png"), (130, 130))
-        self._load_shared('rare_glow', os.path.join("effects", "rare_glow.png"), (130, 130))
-        self._load_shared('ultra_rare_glow', os.path.join("effects", "ultra_rare_glow.png"), (130, 130))
+        self._load_shared('common_glow', os.path.join("effects", "common_glow.png"), (150, 150))
+        self._load_shared('rare_glow', os.path.join("effects", "rare_glow.png"), (150, 150))
+        self._load_shared('ultra_rare_glow', os.path.join("effects", "ultra_rare_glow.png"), (150, 150))
 
         # --- THEME-SPECIFIC PLAYER SPRITES
         # Left direction frames
@@ -102,7 +102,7 @@ class AssetManager:
                          target_size=(260, 380))
         
         # --- SHARED START/END SCREEN BACKGROUND ---
-        self._load_shared('start_background', os.path.join("backgrounds", "people_bg.png"), target_size=(1920, 1080))
+        self._load_shared('start_background', os.path.join("backgrounds", "bg1.png"), target_size=(1920, 1080))
         
         # --- THEME-SPECIFIC GAMEPLAY BACKGROUNDS ---
         if theme == 'food':
