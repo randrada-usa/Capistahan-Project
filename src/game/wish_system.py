@@ -36,15 +36,12 @@ class WishSystem:
     CODE_CHARS = 'ACDEFGHJKLMNPQRTUVWXYZ234679'
     CODE_LENGTH = 6
     
-    # Prize tiers (v1: all wins = Gift Box / Rare tier)
-    PRIZE_TIERS = {
-        'common': {'name': 'Sticker Pack', 'weight': 0},
-        'rare': {'name': 'Gift Box', 'weight': 100},  # 100% of wins for now
-        'ultra': {'name': 'Limited Shirt', 'weight': 0}
-    }
-    
     # Log file for analytics
     LOG_FILE = "wishes_log.jsonl"
+    
+    # Video paths for wish outcomes
+    VIDEO_NO_WISH = os.path.join("assets", "videos", "no_wish.mov")
+    VIDEO_WISH_GRANTED = os.path.join("assets", "videos", "wish_granted.mov")
     
     def __init__(self, category='food'):
         self.category = category
@@ -70,7 +67,9 @@ class WishSystem:
                 'threshold': self.THRESHOLD,
                 'current_score': score,
                 'message': f'Reach {self.THRESHOLD} points to make a wish!',
-                'can_retry': True
+                'can_retry': True,
+                'video_path': None,
+                'auto_play': False
             }
         
         # Roll the dice
@@ -84,40 +83,28 @@ class WishSystem:
     def _generate_win(self, score):
         """Create win result with code and logging."""
         code = self._generate_code()
-        tier = self._select_prize_tier()
         
         result = {
             'eligible': True,
             'won': True,
             'code': code,
-            'prize_tier': tier,
-            'prize_name': self.PRIZE_TIERS[tier]['name'],
-            'message': f'You won a {self.PRIZE_TIERS[tier]["name"]}!',
-            'verification_code': code,
-            'instructions': 'Show this code to the 6-byte Studios booth staff.',
-            'booth_location': 'Capiztahan Main Stage'
+            'video_path': self.VIDEO_WISH_GRANTED,
+            'auto_play': True,
+            'go_to_start': True
         }
         
         self._log_result(score, result)
         return result
     
     def _generate_loss(self, score):
-        """Create loss result with encouragement."""
+        """Create loss result."""
         result = {
             'eligible': True,
             'won': False,
-            'code': None,
-            'prize_tier': None,
-            'message': random.choice([
-                'So close! The spirits of Capiz were not aligned.',
-                'Not this time, but your offering was noted!',
-                'The gacha gods smile upon your next attempt.',
-                'Better luck in the next round of Capiztahan!',
-                'The bay waters were calm, but not favorable today.'
-            ]),
-            'can_retry': True,
-            'hint': 'Try for rarer items to boost your score!',
-            'encouragement': 'You can play again and make another wish!'
+            'video_path': self.VIDEO_NO_WISH,
+            'auto_play': True,
+            'go_to_start': False,
+            'can_retry': True
         }
         
         self._log_result(score, result)

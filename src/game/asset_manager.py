@@ -75,9 +75,9 @@ class AssetManager:
         self._load_shared('people_shock', os.path.join("people", "sprites", "people_shock.png"), (250, 250))
         
         # --- GLOBAL EFFECTS (Glows) ---
-        self._load_shared('common_glow', os.path.join("effects", "common_glow.png"), (130, 130))
-        self._load_shared('rare_glow', os.path.join("effects", "rare_glow.png"), (130, 130))
-        self._load_shared('ultra_rare_glow', os.path.join("effects", "ultra_rare_glow.png"), (130, 130))
+        self._load_shared('common_glow', os.path.join("effects", "common_glow.png"), (150, 150))
+        self._load_shared('rare_glow', os.path.join("effects", "rare_glow.png"), (150, 150))
+        self._load_shared('ultra_rare_glow', os.path.join("effects", "ultra_rare_glow.png"), (150, 150))
 
         # --- THEME-SPECIFIC PLAYER SPRITES
         # Left direction frames
@@ -102,7 +102,7 @@ class AssetManager:
                          target_size=(260, 380))
         
         # --- SHARED START/END SCREEN BACKGROUND ---
-        self._load_shared('start_background', os.path.join("backgrounds", "people_bg.png"), target_size=(1920, 1080))
+        self._load_shared('start_background', os.path.join("backgrounds", "bg1.png"), target_size=(1920, 1080))
         
         # --- THEME-SPECIFIC GAMEPLAY BACKGROUNDS ---
         if theme == 'food':
@@ -135,6 +135,10 @@ class AssetManager:
         self._load_themed(f'bad_item_{theme}', 
                          os.path.join("sprites", f"bad_item_{theme}.png"), 
                          target_size=(110, 110))
+        
+        # --- WISH VIDEOS (Shared) ---
+        self._load_video('wish_granted', os.path.join("videos", "wish_granted.mov"))
+        self._load_video('no_wish', os.path.join("videos", "no_wish.mov"))
         
         # --- LOAD ALL CATEGORY SPRITES FOR UI FALLING ITEMS (Option A) ---
         # This loads sprites from ALL themes so menus can show variety
@@ -247,6 +251,20 @@ class AssetManager:
         except Exception as e:
             log(f"[AssetManager] Error loading {full_path}: {e}")
             return None
+        
+    def _load_video(self, video_name, relative_path):
+        """Store video path for playback."""
+        full_path = os.path.join(self.base_path, relative_path)
+        if os.path.exists(full_path):
+            self.assets[video_name] = full_path
+            log(f"[AssetManager] Loaded video: {relative_path}")
+        else:
+            log(f"[AssetManager] Video not found: {full_path}")
+            self.assets[video_name] = None
+
+    def get_video(self, name):
+        """Get video path by key."""
+        return self.assets.get(name)
     
     def get(self, name):
         """Get asset by key."""
@@ -259,3 +277,6 @@ class AssetManager:
     def get_theme_manager(self):
         """Get theme manager."""
         return self.theme_manager
+    
+
+    
