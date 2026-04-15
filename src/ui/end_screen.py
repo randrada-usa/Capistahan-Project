@@ -2,9 +2,65 @@ import pygame
 import cv2
 import os
 import random
+import numpy as np
 from src.game.falling_objects import FallingItem, Rarity
 from src.game.asset_manager import AssetManager
 from src.game.wish_system import make_wish
+
+
+def play_wish_video(screen, video_path, scale_func=None):
+    """
+    Play a wish video using OpenCV.
+    Press any key or click to skip.
+    """
+    if not video_path or not os.path.exists(video_path):
+        print(f"[play_wish_video] Video not found: {video_path}")
+        return False
+    
+    cap = cv2.VideoCapture(video_path)
+    if not cap.isOpened():
+        print(f"[play_wish_video] Failed to open: {video_path}")
+        return False
+    
+    fps = cap.get(cv2.CAP_PROP_FPS) or 30
+    clock = pygame.time.Clock()
+    target_w, target_h = screen.get_size()
+    
+    print(f"[play_wish_video] Playing: {video_path}")
+    
+    while True:
+        ret, frame = cap.read()
+        if not ret:
+            break
+        
+        # Handle skip events
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                cap.release()
+                return False
+            if event.type in (pygame.KEYDOWN, pygame.MOUSEBUTTONDOWN):
+                cap.release()
+                return True
+        
+        # Convert BGR to RGB, resize, and create surface
+        frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        frame_rgb = cv2.resize(frame_rgb, (target_w, target_h))
+        
+        # Transpose for pygame (OpenCV uses HxWxC, pygame needs WxHxC)
+        frame_rgb = np.transpose(frame_rgb, (1, 0, 2))
+        surface = pygame.surfarray.make_surface(frame_rgb)
+        
+        screen.blit(surface, (0, 0))
+        
+        if scale_func:
+            scale_func(screen)
+        else:
+            pygame.display.flip()
+        
+        clock.tick(fps)
+    
+    cap.release()
+    return True
 
 def get_mouse_pos_virtual():
     """Convert actual window mouse pos to virtual 1920x1080 coordinates."""
@@ -130,10 +186,10 @@ def fade(screen, width, height, fade_in=True, speed=5):
             if alpha >= 255: running = False
 
 class EndScreen:
-    def __init__(self, screen_width=1920, screen_height=1080):
+    def __init__(self, screen_width=1920, screen_height=1080, show_wish_button=True):
         self.screen_width = screen_width
         self.screen_height = screen_height
-        self.wish_used = False
+        self.show_wish_button = show_wish_button  # False when auto wish (loss)
 
         self.font_score = pygame.font.Font(None, 74)
         self.font_high = pygame.font.Font(None, 48)
@@ -293,14 +349,8 @@ class EndScreen:
             title = self.font_wish.render("★ GOLDEN TICKET ★", True, (255, 215, 0))
             screen.blit(title, title.get_rect(center=(self.screen_width // 2, box_y + 60)))
             
-            prize = self.font_high.render(self.wish_result.get('prize_name', 'Gift Box'), True, (255, 255, 255))
-            screen.blit(prize, prize.get_rect(center=(self.screen_width // 2, box_y + 140)))
-            
             code_text = self.font_high.render(f"Code: {self.wish_result.get('code', 'XXXXXX')}", True, (0, 255, 0))
             screen.blit(code_text, code_text.get_rect(center=(self.screen_width // 2, box_y + 200)))
-            
-            inst = self.font_hints.render("Show this code to the 6-byte Studios booth!", True, (200, 200, 200))
-            screen.blit(inst, inst.get_rect(center=(self.screen_width // 2, box_y + 280)))
             
         else:
             pygame.draw.rect(screen, (100, 100, 100), (box_x - 10, box_y - 10, box_w + 20, box_h + 20), border_radius=30)
@@ -311,15 +361,12 @@ class EndScreen:
             
             msg = self.font_high.render(self.wish_result.get('message', 'Not this time!'), True, (255, 255, 255))
             screen.blit(msg, msg.get_rect(center=(self.screen_width // 2, box_y + 160)))
-            
-            enc = self.font_hints.render(self.wish_result.get('encouragement', 'Try again!'), True, (255, 200, 100))
-            screen.blit(enc, enc.get_rect(center=(self.screen_width // 2, box_y + 240)))
         
         continue_text = self.font_hints.render("Click or press any key to continue...", True, (150, 150, 150))
         screen.blit(continue_text, continue_text.get_rect(center=(self.screen_width // 2, box_y + box_h - 50)))
 
     def _draw_wish_button(self, screen, eligible):
-        if self.showing_wish_modal:
+        if not self.show_wish_button or self.showing_wish_modal:
             return
         
         status = self.game_state.get_wish_status() if self.game_state else None
@@ -406,7 +453,19 @@ class EndScreen:
 def show_end_screen(screen, game_state, 
                     background_snapshot=None, screen_width=1920, screen_height=1080,
                     gesture_controller=None, scale_func=None):
-    end_screen = EndScreen(screen_width, screen_height)
+    # Auto-resolve wish when game ends
+    wish_result = make_wish(game_state.score, game_state.theme if hasattr(game_state, 'theme') else 'food')
+    
+    # Play video if available
+    if wish_result.get('video_path'):
+        play_wish_video(screen, wish_result['video_path'], scale_func)
+    
+    # If win, go directly to start (return False to go back to menu/start)
+    if wish_result.get('won'):
+        return False  # Goes back to start screen
+    
+    # If loss, show end screen without wish button
+    end_screen = EndScreen(screen_width, screen_height, show_wish_button=False)
     
     final_score = game_state.score
     high_score = game_state.high_score
@@ -414,6 +473,10 @@ def show_end_screen(screen, game_state,
     
     end_screen.set_scores(final_score, high_score, is_new_record)
     end_screen.set_game_state(game_state)
+    
+    # Store wish result for display in modal
+    end_screen.wish_result = wish_result
+    end_screen.showing_wish_modal = True  # Show the result modal immediately
     
     clock = pygame.time.Clock()
     do_flip = scale_func if scale_func else lambda s: pygame.display.flip()
