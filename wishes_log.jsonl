@@ -75,3 +75,10 @@
 {"timestamp": "2026-04-14T14:55:04.114530", "category": "food", "score": 300, "threshold": 200, "eligible": true, "won": false, "code": null, "prize_tier": null, "session_id": "G6RT"}
 {"timestamp": "2026-04-14T15:05:24.256973", "category": "people", "score": 444, "threshold": 200, "eligible": true, "won": true, "code": "LZ3RNE", "prize_tier": "rare", "session_id": "TA2C"}
 {"timestamp": "2026-04-14T15:21:37.932226", "category": "culture", "score": 564, "threshold": 200, "eligible": true, "won": true, "code": "KJ99N7", "prize_tier": null, "session_id": "TYEZ"}
+{"timestamp": "2026-04-15T14:27:49.335459", "category": "culture", "score": 396, "threshold": 200, "eligible": true, "won": true, "code": "2NLXR7", "prize_tier": null, "session_id": "72KA"}
+{"timestamp": "2026-04-15T14:41:24.052414", "category": "food", "score": 588, "threshold": 200, "eligible": true, "won": true, "code": "EYZ7FK", "prize_tier": null, "session_id": "CNR3"}
+{"timestamp": "2026-04-15T14:43:18.514939", "category": "food", "score": 252, "threshold": 200, "eligible": true, "won": true, "code": "7QGWRF", "prize_tier": null, "session_id": "GLCG"}
+{"timestamp": "2026-04-15T14:45:22.468115", "category": "food", "score": 772, "threshold": 200, "eligible": true, "won": false, "code": null, "prize_tier": null, "session_id": "TY4X"}
+{"timestamp": "2026-04-15T14:52:20.345585", "category": "food", "score": 420, "threshold": 200, "eligible": true, "won": false, "code": null, "prize_tier": null, "session_id": "LCTW"}
+{"timestamp": "2026-04-15T14:53:51.980111", "category": "food", "score": 550, "threshold": 200, "eligible": true, "won": false, "code": null, "prize_tier": null, "session_id": "73KP"}
+{"timestamp": "2026-04-15T14:55:39.057026", "category": "food", "score": 590, "threshold": 200, "eligible": true, "won": true, "code": "MFF4JJ", "prize_tier": null, "session_id": "FLDV"}

@@ -39,6 +39,10 @@ class WishSystem:
     # Log file for analytics
     LOG_FILE = "wishes_log.jsonl"
     
+    # Video paths for wish outcomes
+    VIDEO_NO_WISH = os.path.join("assets", "videos", "no_wish.mov")
+    VIDEO_WISH_GRANTED = os.path.join("assets", "videos", "wish_granted.mov")
+    
     def __init__(self, category='food'):
         self.category = category
         self._today_wins = 0
@@ -63,7 +67,9 @@ class WishSystem:
                 'threshold': self.THRESHOLD,
                 'current_score': score,
                 'message': f'Reach {self.THRESHOLD} points to make a wish!',
-                'can_retry': True
+                'can_retry': True,
+                'video_path': None,
+                'auto_play': False
             }
         
         # Roll the dice
@@ -82,31 +88,23 @@ class WishSystem:
             'eligible': True,
             'won': True,
             'code': code,
-            'verification_code': code,
-            'instructions': 'Show this code to the 6-byte Studios booth staff.',
-            'booth_location': 'Capiztahan Main Stage'
+            'video_path': self.VIDEO_WISH_GRANTED,
+            'auto_play': True,
+            'go_to_start': True
         }
         
         self._log_result(score, result)
         return result
     
     def _generate_loss(self, score):
-        """Create loss result with encouragement."""
+        """Create loss result."""
         result = {
             'eligible': True,
             'won': False,
-            'code': None,
-            'prize_tier': None,
-            'message': random.choice([
-                'So close! The spirits of Capiz were not aligned.',
-                'Not this time, but your offering was noted!',
-                'The gacha gods smile upon your next attempt.',
-                'Better luck in the next round of Capiztahan!',
-                'The bay waters were calm, but not favorable today.'
-            ]),
-            'can_retry': True,
-            'hint': 'Try for rarer items to boost your score!',
-            'encouragement': 'You can play again and make another wish!'
+            'video_path': self.VIDEO_NO_WISH,
+            'auto_play': True,
+            'go_to_start': False,
+            'can_retry': True
         }
         
         self._log_result(score, result)
