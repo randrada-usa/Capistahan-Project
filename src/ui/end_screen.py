@@ -456,15 +456,16 @@ def show_end_screen(screen, game_state,
     # Auto-resolve wish when game ends
     wish_result = make_wish(game_state.score, game_state.theme if hasattr(game_state, 'theme') else 'food')
     
-    # Play video if available
-    if wish_result.get('video_path'):
-        play_wish_video(screen, wish_result['video_path'], scale_func)
+    # Play all videos sequentially
+    if wish_result.get('video_paths'):
+        for video_path in wish_result['video_paths']:
+            play_wish_video(screen, video_path, scale_func)
     
-    # If win, go directly to start (return False to go back to menu/start)
+    # If any win, go directly to start (return False to go back to menu/start)
     if wish_result.get('won'):
         return False  # Goes back to start screen
     
-    # If loss, show end screen without wish button
+    # If all losses, show end screen without wish button
     end_screen = EndScreen(screen_width, screen_height, show_wish_button=False)
     
     final_score = game_state.score
@@ -474,12 +475,47 @@ def show_end_screen(screen, game_state,
     end_screen.set_scores(final_score, high_score, is_new_record)
     end_screen.set_game_state(game_state)
     
-    # Store wish result for display in modal
-    end_screen.wish_result = wish_result
+    # Store wish result for display in modal (show first loss message)
+    if wish_result.get('wishes'):
+        end_screen.wish_result = wish_result['wishes'][0]  # Show first wish result
+    else:
+        end_screen.wish_result = wish_result
     end_screen.showing_wish_modal = True  # Show the result modal immediately
     
     clock = pygame.time.Clock()
     do_flip = scale_func if scale_func else lambda s: pygame.display.flip()
+    
+    while True:
+        dt = clock.tick(60) / 1000
+        
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit(); exit()
+            
+            # HANDLE RESIZE
+            if event.type == pygame.VIDEORESIZE:
+                pygame.display.set_mode((event.w, event.h), pygame.RESIZABLE)
+                continue
+            
+            action = end_screen.handle_event(event)
+            if action == "retry":
+                pygame.mixer.music.fadeout(1000) 
+                return True
+            elif action == "menu":
+                return False
+            elif action == "quit":
+                return False
+        
+        if gesture_controller:
+            gesture_controller.update()
+            debug_frame = gesture_controller.get_debug_frame()
+            if debug_frame is not None:
+                cv2.imshow("GAMEFRICKS PROTOTYPE01 - Camera Feed", debug_frame)
+                cv2.waitKey(1)
+        
+        end_screen.falling.update(dt)
+        end_screen.render(screen, background_snapshot)
+        do_flip(screen)
     
     while True:
         dt = clock.tick(60) / 1000
