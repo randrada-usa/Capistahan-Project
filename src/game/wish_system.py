@@ -29,6 +29,9 @@ class WishSystem:
     # Score needed to unlock wish
     THRESHOLD = 200
     
+    # Double threshold for two wishes
+    DOUBLE_THRESHOLD = 400
+    
     # Win probability (0.0 to 1.0)
     WIN_CHANCE = 0.40
     
@@ -51,6 +54,10 @@ class WishSystem:
         """Returns True if score meets threshold."""
         return score >= self.THRESHOLD
     
+    def check_double_wish(self, score):
+        """Returns True if score meets double threshold for two wishes."""
+        return score >= self.DOUBLE_THRESHOLD
+    
     def get_progress(self, score):
         """Returns 0.0 to 1.0 progress toward threshold."""
         return min(1.0, score / self.THRESHOLD)
@@ -69,18 +76,38 @@ class WishSystem:
                 'message': f'Reach {self.THRESHOLD} points to make a wish!',
                 'can_retry': True,
                 'video_path': None,
-                'auto_play': False
+                'auto_play': False,
+                'wish_count': 0
             }
         
-        # Roll the dice
-        won = random.random() < self.WIN_CHANCE
+        # Check if double wish (400+ points)
+        is_double = self.check_double_wish(score)
+        wish_count = 2 if is_double else 1
         
-        if won:
-            return self._generate_win(score)
-        else:
-            return self._generate_loss(score)
+        # Roll for each wish
+        wishes = []
+        for i in range(wish_count):
+            won = random.random() < self.WIN_CHANCE
+            if won:
+                wishes.append(self._generate_win(score, wish_num=i+1, total_wishes=wish_count))
+            else:
+                wishes.append(self._generate_loss(score, wish_num=i+1, total_wishes=wish_count))
+        
+        # Return combined result
+        result = {
+            'eligible': True,
+            'won': any(w['won'] for w in wishes),
+            'wishes': wishes,
+            'wish_count': wish_count,
+            'video_paths': [w['video_path'] for w in wishes],
+            'codes': [w.get('code') for w in wishes if w.get('code')],
+            'auto_play': True,
+            'go_to_start': any(w.get('go_to_start', False) for w in wishes)
+        }
+        
+        return result
     
-    def _generate_win(self, score):
+    def _generate_win(self, score, wish_num=1, total_wishes=1):
         """Create win result with code and logging."""
         code = self._generate_code()
         
@@ -89,22 +116,21 @@ class WishSystem:
             'won': True,
             'code': code,
             'video_path': self.VIDEO_WISH_GRANTED,
-            'auto_play': True,
-            'go_to_start': True
+            'wish_num': wish_num,
+            'total_wishes': total_wishes
         }
         
         self._log_result(score, result)
         return result
     
-    def _generate_loss(self, score):
+    def _generate_loss(self, score, wish_num=1, total_wishes=1):
         """Create loss result."""
         result = {
             'eligible': True,
             'won': False,
             'video_path': self.VIDEO_NO_WISH,
-            'auto_play': True,
-            'go_to_start': False,
-            'can_retry': True
+            'wish_num': wish_num,
+            'total_wishes': total_wishes
         }
         
         self._log_result(score, result)
@@ -140,6 +166,8 @@ class WishSystem:
             'won': result.get('won', False),
             'code': result.get('code'),
             'prize_tier': result.get('prize_tier'),
+            'wish_num': result.get('wish_num', 1),
+            'total_wishes': result.get('total_wishes', 1),
             'session_id': self._generate_code()[:4]
         }
         
