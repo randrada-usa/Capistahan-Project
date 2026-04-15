@@ -136,6 +136,10 @@ class AssetManager:
                          os.path.join("sprites", f"bad_item_{theme}.png"), 
                          target_size=(110, 110))
         
+        # --- WISH VIDEOS (Shared) ---
+        self._load_video('wish_granted', os.path.join("videos", "wish_granted.mov"))
+        self._load_video('no_wish', os.path.join("videos", "no_wish.mov"))
+        
         # --- LOAD ALL CATEGORY SPRITES FOR UI FALLING ITEMS (Option A) ---
         # This loads sprites from ALL themes so menus can show variety
         # Memory cost: ~580KB total for 12 sprites (110x110 each)
@@ -247,6 +251,20 @@ class AssetManager:
         except Exception as e:
             log(f"[AssetManager] Error loading {full_path}: {e}")
             return None
+        
+    def _load_video(self, video_name, relative_path):
+        """Store video path for playback."""
+        full_path = os.path.join(self.base_path, relative_path)
+        if os.path.exists(full_path):
+            self.assets[video_name] = full_path
+            log(f"[AssetManager] Loaded video: {relative_path}")
+        else:
+            log(f"[AssetManager] Video not found: {full_path}")
+            self.assets[video_name] = None
+
+    def get_video(self, name):
+        """Get video path by key."""
+        return self.assets.get(name)
     
     def get(self, name):
         """Get asset by key."""
@@ -259,3 +277,6 @@ class AssetManager:
     def get_theme_manager(self):
         """Get theme manager."""
         return self.theme_manager
+    
+
+    

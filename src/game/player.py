@@ -25,7 +25,7 @@ class Player:
         self.width = 380
         self.height = 260
         self.facing = 'idle'
-        self.move_threshold = 40  # Changed from 40 to 10 as requested
+        self.move_threshold = 40
         self.sprite_offset_y = 30
         
         # Basket hitbox
@@ -43,7 +43,7 @@ class Player:
             self.freeze()
         else:
             self.unfreeze()
-            BORDER_WIDTH = 200
+            BORDER_WIDTH = 5
             margin = BORDER_WIDTH + self.width // 2
             self.target_x = max(margin, min(x, self.screen_width - margin))
     

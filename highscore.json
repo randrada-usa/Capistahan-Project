@@ -47,35 +47,35 @@
       "multiplier": 1.5
     },
     {
-      "score": 684,
-      "date": "2026-04-12 17:48",
+      "score": 772,
+      "date": "2026-04-15 14:45",
       "is_new": true,
-      "category": "culture",
-      "category_display": "Capiz Traditions",
-      "best_catch": "Wish Culture",
+      "category": "people",
+      "category_display": "Capiz Community",
+      "best_catch": "Wish People",
       "catches": {
-        "very_common": 6,
-        "common": 4,
-        "rare": 12,
-        "ultra_rare": 0,
+        "very_common": 10,
+        "common": 2,
+        "rare": 6,
+        "ultra_rare": 2,
         "wish": 2
       },
-      "multiplier": 1.2
+      "multiplier": 1.5
     },
     {
-      "score": 672,
-      "date": "2026-04-13 17:31",
+      "score": 744,
+      "date": "2026-04-13 20:52",
       "is_new": true,
-      "category": "culture",
-      "category_display": "Capiz Traditions",
-      "best_catch": "Rare Culture",
+      "category": "people",
+      "category_display": "Capiz Community",
+      "best_catch": "Ultra Rare People",
       "catches": {
-        "very_common": 16,
-        "common": 18,
-        "rare": 12,
-        "ultra_rare": 0
+        "very_common": 6,
+        "common": 12,
+        "rare": 6,
+        "ultra_rare": 4
       },
-      "multiplier": 1.2
+      "multiplier": 1.5
     }
   ]
 }
