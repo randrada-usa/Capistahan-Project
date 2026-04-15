@@ -359,7 +359,7 @@ class EndScreen:
             title = self.font_wish.render("BETTER LUCK NEXT TIME", True, (200, 200, 200))
             screen.blit(title, title.get_rect(center=(self.screen_width // 2, box_y + 80)))
             
-            msg = self.font_high.render(self.wish_result.get('message', 'Not this time!'), True, (255, 255, 255))
+            msg = self.font_high.render(self.wish_result.get('message', 'Perla saw you effort! Try again later!'), True, (255, 255, 255))
             screen.blit(msg, msg.get_rect(center=(self.screen_width // 2, box_y + 160)))
         
         continue_text = self.font_hints.render("Click or press any key to continue...", True, (150, 150, 150))
