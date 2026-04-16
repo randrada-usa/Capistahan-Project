@@ -2,6 +2,7 @@
 wish_system.py
 Gacha prize mechanics for Capiztahan event.
 Owner: Gio
+Modified: Multiple wishes based on score thresholds (200, 400, 600, etc.)
 """
 
 import random
@@ -9,7 +10,6 @@ import json
 import os
 from datetime import datetime
 
-# Platform-specific file locking (Unix only, Windows skips)
 try:
     import fcntl
     HAS_FCNTL = True
@@ -18,145 +18,143 @@ except ImportError:
 
 
 class WishSystem:
-    """
-    Handles post-game wish mechanics:
-    - Eligibility check (score threshold)
-    - Probability roll (20% win rate)
-    - Verification code generation
-    - Prize logging for analytics
-    """
-    
-    # Score needed to unlock wish
-    THRESHOLD = 200
-    
-    # Double threshold for two wishes
-    DOUBLE_THRESHOLD = 400
-    
-    # Win probability (0.0 to 1.0)
+    THRESHOLD = 200           # Base threshold for first wish
     WIN_CHANCE = 0.40
-    
-    # Code generation alphabet (no ambiguous chars: O/0, I/l)
     CODE_CHARS = 'ACDEFGHJKLMNPQRTUVWXYZ234679'
     CODE_LENGTH = 6
-    
-    # Log file for analytics
     LOG_FILE = "wishes_log.jsonl"
-    
-    # Video paths for wish outcomes
     VIDEO_NO_WISH = os.path.join("assets", "videos", "no_wish.mov")
     VIDEO_WISH_GRANTED = os.path.join("assets", "videos", "wish_granted.mov")
-    
+
     def __init__(self, category='food'):
         self.category = category
         self._today_wins = 0
-    
+
     def check_eligibility(self, score):
-        """Returns True if score meets threshold."""
         return score >= self.THRESHOLD
-    
-    def check_double_wish(self, score):
-        """Returns True if score meets double threshold for two wishes."""
-        return score >= self.DOUBLE_THRESHOLD
-    
+
     def get_progress(self, score):
-        """Returns 0.0 to 1.0 progress toward threshold."""
         return min(1.0, score / self.THRESHOLD)
-    
-    def roll_wish(self, score):
+
+    def get_wish_status(self, score):
         """
-        Main entry point. Returns complete result dict.
-        Call this from end_screen.py when player clicks "Make Wish"
+        Returns how many wishes the player has earned and progress info.
         """
-        # Not eligible
-        if not self.check_eligibility(score):
+        total_wishes = score // self.THRESHOLD  # 200 = 1, 400 = 2, 600 = 3, etc.
+        progress_to_next = (score % self.THRESHOLD) / self.THRESHOLD
+
+        return {
+            'total_earned': total_wishes,
+            'current_score': score,
+            'threshold': self.THRESHOLD,
+            'progress_percent': progress_to_next * 100,
+            'next_wish_at': (total_wishes + 1) * self.THRESHOLD,
+            'eligible': total_wishes >= 1
+        }
+
+    def roll_wish(self, score, used_wishes=0):
+        """
+        Roll wishes based on score.
+        score: player's current score
+        used_wishes: how many wishes have already been used this game
+
+        Returns result with all wishes rolled.
+        """
+        status = self.get_wish_status(score)
+        total_wishes = status['total_earned']
+        available_wishes = total_wishes - used_wishes
+
+        if available_wishes <= 0:
             return {
                 'eligible': False,
                 'threshold': self.THRESHOLD,
                 'current_score': score,
-                'message': f'Reach {self.THRESHOLD} points to make a wish!',
+                'message': f'Reach {(total_wishes + 1) * self.THRESHOLD} points for another wish!',
                 'can_retry': True,
-                'video_path': None,
+                'video_paths': [],
                 'auto_play': False,
-                'wish_count': 0
+                'wish_count': 0,
+                'wishes': [],
+                'codes': []
             }
-        
-        # Check if double wish (400+ points)
-        is_double = self.check_double_wish(score)
-        wish_count = 2 if is_double else 1
-        
-        # Roll for each wish
+
+        # Roll all available wishes
         wishes = []
-        for i in range(wish_count):
+        video_paths = []
+        codes = []
+        any_win = False
+
+        for i in range(available_wishes):
+            wish_num = used_wishes + i + 1
             won = random.random() < self.WIN_CHANCE
+
             if won:
-                wishes.append(self._generate_win(score, wish_num=i+1, total_wishes=wish_count))
+                wish = self._generate_win(score, wish_num=wish_num, total_wishes=total_wishes)
+                any_win = True
             else:
-                wishes.append(self._generate_loss(score, wish_num=i+1, total_wishes=wish_count))
-        
-        # Return combined result
+                wish = self._generate_loss(score, wish_num=wish_num, total_wishes=total_wishes)
+
+            wishes.append(wish)
+            video_paths.append(wish['video_path'])
+            if wish.get('code'):
+                codes.append(wish['code'])
+
         result = {
             'eligible': True,
-            'won': any(w['won'] for w in wishes),
+            'won': any_win,  # True if ANY of the wishes won
             'wishes': wishes,
-            'wish_count': wish_count,
-            'video_paths': [w['video_path'] for w in wishes],
-            'codes': [w.get('code') for w in wishes if w.get('code')],
+            'wish_count': len(wishes),
+            'video_paths': video_paths,
+            'codes': codes,
             'auto_play': True,
-            'go_to_start': any(w.get('go_to_start', False) for w in wishes)
+            'go_to_start': any_win,  # Go to start if any win
+            'total_earned': total_wishes,
+            'available_wishes': available_wishes
         }
-        
+
         return result
-    
+
     def _generate_win(self, score, wish_num=1, total_wishes=1):
-        """Create win result with code and logging."""
         code = self._generate_code()
-        
+
         result = {
             'eligible': True,
             'won': True,
             'code': code,
             'video_path': self.VIDEO_WISH_GRANTED,
             'wish_num': wish_num,
-            'total_wishes': total_wishes
+            'total_wishes': total_wishes,
+            'message': f'\u2605 WISH GRANTED! Code: {code} \u2605'
         }
-        
+
         self._log_result(score, result)
         return result
-    
+
     def _generate_loss(self, score, wish_num=1, total_wishes=1):
-        """Create loss result."""
+        messages = [
+            "Perla saw your effort! Try again!",
+            "So close! Keep playing!",
+            "The sea spirits weren't listening...",
+            "Not this time, but don't give up!",
+            "Your wish dissolved like sea foam..."
+        ]
+
         result = {
             'eligible': True,
             'won': False,
             'video_path': self.VIDEO_NO_WISH,
             'wish_num': wish_num,
-            'total_wishes': total_wishes
+            'total_wishes': total_wishes,
+            'message': random.choice(messages)
         }
-        
+
         self._log_result(score, result)
         return result
-    
+
     def _generate_code(self):
-        """Generate unique verification code."""
         return ''.join(random.choices(self.CODE_CHARS, k=self.CODE_LENGTH))
-    
-    def _select_prize_tier(self):
-        """Weighted selection from active prize tiers."""
-        active_tiers = {
-            k: v for k, v in self.PRIZE_TIERS.items() 
-            if v['weight'] > 0
-        }
-        
-        if not active_tiers:
-            return 'rare'
-        
-        tiers = list(active_tiers.keys())
-        weights = [active_tiers[t]['weight'] for t in tiers]
-        
-        return random.choices(tiers, weights=weights, k=1)[0]
-    
+
     def _log_result(self, score, result):
-        """Append result to analytics log."""
         log_entry = {
             'timestamp': datetime.now().isoformat(),
             'category': self.category,
@@ -165,74 +163,32 @@ class WishSystem:
             'eligible': result['eligible'],
             'won': result.get('won', False),
             'code': result.get('code'),
-            'prize_tier': result.get('prize_tier'),
             'wish_num': result.get('wish_num', 1),
             'total_wishes': result.get('total_wishes', 1),
             'session_id': self._generate_code()[:4]
         }
-        
+
         try:
-            # Simple append mode (safe for single-player game)
-            # File locking only applied on Unix systems
             with open(self.LOG_FILE, 'a') as f:
                 if HAS_FCNTL:
                     fcntl.flock(f, fcntl.LOCK_EX)
-                
                 f.write(json.dumps(log_entry) + '\n')
-                
                 if HAS_FCNTL:
-                    fcntl.fcntl.flock(f, fcntl.LOCK_UN)
-                    
+                    fcntl.flock(f, fcntl.LOCK_UN)
         except Exception as e:
-            print(f"[WishSystem] Log error: {e}")
-    
-    def get_analytics_summary(self):
-        """
-        Return stats for 6-byte Studios dashboard.
-        Call this on game startup to show 'X winners today!'
-        """
-        if not os.path.exists(self.LOG_FILE):
-            return {
-                'total_attempts': 0, 
-                'total_wins': 0, 
-                'win_rate': 0,
-                'today_wins': 0
-            }
-        
-        total = 0
-        wins = 0
-        today = datetime.now().date().isoformat()
-        today_wins = 0
-        
-        try:
-            with open(self.LOG_FILE, 'r') as f:
-                for line in f:
-                    try:
-                        entry = json.loads(line.strip())
-                        total += 1
-                        if entry.get('won'):
-                            wins += 1
-                            if entry['timestamp'].startswith(today):
-                                today_wins += 1
-                    except json.JSONDecodeError:
-                        continue  # Skip corrupted lines
-        except Exception as e:
-            print(f"[WishSystem] Analytics error: {e}")
-        
-        return {
-            'total_attempts': total,
-            'total_wins': wins,
-            'win_rate': wins / total if total > 0 else 0,
-            'today_wins': today_wins,
-            'target_win_rate': self.WIN_CHANCE
-        }
+            print(f"[WishSystem] Failed to log result: {e}")
 
 
-# Convenience function for simple integration
-def make_wish(score, category='food'):
+def make_wish(score, category='food', used_wishes=0):
     """
-    One-shot function for end_screen.py
-    Returns result dict directly.
+    Simple interface to roll wishes.
+
+    Args:
+        score: player's current score
+        category: game category theme
+        used_wishes: number of wishes already used this session
+
+    Returns the full result dictionary with all available wishes.
     """
-    wish = WishSystem(category=category)
-    return wish.roll_wish(score)
+    system = WishSystem(category=category)
+    return system.roll_wish(score, used_wishes=used_wishes)

@@ -101,3 +101,49 @@
 {"timestamp": "2026-04-16T08:50:01.577618", "category": "food", "score": 666, "threshold": 200, "eligible": true, "won": false, "code": null, "prize_tier": null, "wish_num": 1, "total_wishes": 2, "session_id": "JUGE"}
 {"timestamp": "2026-04-16T08:50:01.578977", "category": "food", "score": 666, "threshold": 200, "eligible": true, "won": false, "code": null, "prize_tier": null, "wish_num": 2, "total_wishes": 2, "session_id": "C29G"}
 {"timestamp": "2026-04-16T08:51:45.969802", "category": "food", "score": 336, "threshold": 200, "eligible": true, "won": false, "code": null, "prize_tier": null, "wish_num": 1, "total_wishes": 1, "session_id": "CQFA"}
+{"timestamp": "2026-04-16T11:47:02.203911", "category": "food", "score": 600, "threshold": 200, "eligible": true, "won": false, "code": null, "prize_tier": null, "wish_num": 1, "total_wishes": 2, "session_id": "EZEC"}
+{"timestamp": "2026-04-16T11:47:02.205047", "category": "food", "score": 600, "threshold": 200, "eligible": true, "won": true, "code": "6D99QQ", "prize_tier": null, "wish_num": 2, "total_wishes": 2, "session_id": "GZ3N"}
+{"timestamp": "2026-04-16T12:00:40.276770", "category": "food", "score": 290, "threshold": 200, "eligible": true, "won": false, "code": null, "wish_num": 1, "total_wishes": 1, "session_id": "3Y4X"}
+{"timestamp": "2026-04-16T12:02:46.901892", "category": "food", "score": 626, "threshold": 200, "eligible": true, "won": false, "code": null, "wish_num": 1, "total_wishes": 1, "session_id": "P4GA"}
+{"timestamp": "2026-04-16T12:05:32.819648", "category": "food", "score": 746, "threshold": 200, "eligible": true, "won": false, "code": null, "prize_tier": null, "wish_num": 1, "total_wishes": 2, "session_id": "U7Y2"}
+{"timestamp": "2026-04-16T12:05:32.821278", "category": "food", "score": 746, "threshold": 200, "eligible": true, "won": false, "code": null, "prize_tier": null, "wish_num": 2, "total_wishes": 2, "session_id": "A3NM"}
+{"timestamp": "2026-04-16T12:31:03.277994", "category": "food", "score": 312, "threshold": 200, "eligible": true, "won": false, "code": null, "wish_num": 1, "total_wishes": 1, "session_id": "NAPJ"}
+{"timestamp": "2026-04-16T12:32:35.309142", "category": "food", "score": 550, "threshold": 200, "eligible": true, "won": false, "code": null, "wish_num": 1, "total_wishes": 1, "session_id": "KGFL"}
+{"timestamp": "2026-04-16T18:40:17.364763", "category": "food", "score": 468, "threshold": 200, "eligible": true, "won": false, "code": null, "wish_num": 1, "total_wishes": 1, "session_id": "F2ZL"}
+{"timestamp": "2026-04-16T18:52:12.368358", "category": "food", "score": 648, "threshold": 200, "eligible": true, "won": true, "code": "NUMGGG", "wish_num": 1, "total_wishes": 3, "session_id": "4UGL"}
+{"timestamp": "2026-04-16T18:52:12.369873", "category": "food", "score": 648, "threshold": 200, "eligible": true, "won": false, "code": null, "wish_num": 2, "total_wishes": 3, "session_id": "4J9L"}
+{"timestamp": "2026-04-16T18:52:12.369873", "category": "food", "score": 648, "threshold": 200, "eligible": true, "won": false, "code": null, "wish_num": 3, "total_wishes": 3, "session_id": "AXQC"}
+{"timestamp": "2026-04-16T19:10:47.487772", "category": "food", "score": 636, "threshold": 200, "eligible": true, "won": false, "code": null, "wish_num": 1, "total_wishes": 3, "session_id": "Y2DL"}
+{"timestamp": "2026-04-16T19:10:47.488824", "category": "food", "score": 636, "threshold": 200, "eligible": true, "won": false, "code": null, "wish_num": 2, "total_wishes": 3, "session_id": "LC2C"}
+{"timestamp": "2026-04-16T19:10:47.488824", "category": "food", "score": 636, "threshold": 200, "eligible": true, "won": true, "code": "XEQW7P", "wish_num": 3, "total_wishes": 3, "session_id": "UPJL"}
+{"timestamp": "2026-04-16T19:17:50.621096", "category": "food", "score": 208, "threshold": 200, "eligible": true, "won": false, "code": null, "wish_num": 1, "total_wishes": 1, "session_id": "WXYQ"}
+{"timestamp": "2026-04-16T19:36:46.344432", "category": "food", "score": 550, "threshold": 200, "eligible": true, "won": false, "code": null, "wish_num": 1, "total_wishes": 2, "session_id": "VT76"}
+{"timestamp": "2026-04-16T19:36:46.345408", "category": "food", "score": 550, "threshold": 200, "eligible": true, "won": true, "code": "UQ67CK", "wish_num": 2, "total_wishes": 2, "session_id": "EK2L"}
+{"timestamp": "2026-04-16T19:43:43.910958", "category": "food", "score": 664, "threshold": 200, "eligible": true, "won": false, "code": null, "wish_num": 1, "total_wishes": 3, "session_id": "U6PV"}
+{"timestamp": "2026-04-16T19:43:43.911955", "category": "food", "score": 664, "threshold": 200, "eligible": true, "won": false, "code": null, "wish_num": 2, "total_wishes": 3, "session_id": "WCGG"}
+{"timestamp": "2026-04-16T19:43:43.912950", "category": "food", "score": 664, "threshold": 200, "eligible": true, "won": false, "code": null, "wish_num": 3, "total_wishes": 3, "session_id": "2FGP"}
+{"timestamp": "2026-04-16T19:45:54.341232", "category": "food", "score": 420, "threshold": 200, "eligible": true, "won": false, "code": null, "wish_num": 1, "total_wishes": 2, "session_id": "LAN3"}
+{"timestamp": "2026-04-16T19:45:54.341737", "category": "food", "score": 420, "threshold": 200, "eligible": true, "won": false, "code": null, "wish_num": 2, "total_wishes": 2, "session_id": "9NHD"}
+{"timestamp": "2026-04-16T19:47:34.382341", "category": "food", "score": 460, "threshold": 200, "eligible": true, "won": false, "code": null, "wish_num": 1, "total_wishes": 2, "session_id": "MQUT"}
+{"timestamp": "2026-04-16T19:47:34.383976", "category": "food", "score": 460, "threshold": 200, "eligible": true, "won": true, "code": "4P4YRR", "wish_num": 2, "total_wishes": 2, "session_id": "22EY"}
+{"timestamp": "2026-04-16T19:49:14.423828", "category": "food", "score": 562, "threshold": 200, "eligible": true, "won": false, "code": null, "wish_num": 1, "total_wishes": 2, "session_id": "C2PA"}
+{"timestamp": "2026-04-16T19:49:14.425259", "category": "food", "score": 562, "threshold": 200, "eligible": true, "won": false, "code": null, "wish_num": 2, "total_wishes": 2, "session_id": "KM7M"}
+{"timestamp": "2026-04-16T19:53:28.531531", "category": "food", "score": 652, "threshold": 200, "eligible": true, "won": false, "code": null, "wish_num": 1, "total_wishes": 3, "session_id": "33Q9"}
+{"timestamp": "2026-04-16T19:53:28.533545", "category": "food", "score": 652, "threshold": 200, "eligible": true, "won": false, "code": null, "wish_num": 2, "total_wishes": 3, "session_id": "MUFL"}
+{"timestamp": "2026-04-16T19:53:28.534541", "category": "food", "score": 652, "threshold": 200, "eligible": true, "won": false, "code": null, "wish_num": 3, "total_wishes": 3, "session_id": "T9A9"}
+{"timestamp": "2026-04-16T19:55:37.827949", "category": "food", "score": 420, "threshold": 200, "eligible": true, "won": false, "code": null, "wish_num": 1, "total_wishes": 2, "session_id": "3UWM"}
+{"timestamp": "2026-04-16T19:55:37.829478", "category": "food", "score": 420, "threshold": 200, "eligible": true, "won": false, "code": null, "wish_num": 2, "total_wishes": 2, "session_id": "APGZ"}
+{"timestamp": "2026-04-16T20:05:18.684478", "category": "food", "score": 600, "threshold": 200, "eligible": true, "won": false, "code": null, "wish_num": 1, "total_wishes": 3, "session_id": "QV63"}
+{"timestamp": "2026-04-16T20:05:18.685481", "category": "food", "score": 600, "threshold": 200, "eligible": true, "won": true, "code": "A7AQCV", "wish_num": 2, "total_wishes": 3, "session_id": "AEDQ"}
+{"timestamp": "2026-04-16T20:05:18.686479", "category": "food", "score": 600, "threshold": 200, "eligible": true, "won": true, "code": "AYDJUA", "wish_num": 3, "total_wishes": 3, "session_id": "WNVK"}
+{"timestamp": "2026-04-16T20:16:51.287898", "category": "food", "score": 590, "threshold": 200, "eligible": true, "won": false, "code": null, "wish_num": 1, "total_wishes": 2, "session_id": "J2QJ"}
+{"timestamp": "2026-04-16T20:16:51.288409", "category": "food", "score": 590, "threshold": 200, "eligible": true, "won": true, "code": "JWD4FA", "wish_num": 2, "total_wishes": 2, "session_id": "Z3TX"}
+{"timestamp": "2026-04-16T20:27:46.978915", "category": "food", "score": 588, "threshold": 200, "eligible": true, "won": false, "code": null, "wish_num": 1, "total_wishes": 2, "session_id": "TE4C"}
+{"timestamp": "2026-04-16T20:27:46.979894", "category": "food", "score": 588, "threshold": 200, "eligible": true, "won": false, "code": null, "wish_num": 2, "total_wishes": 2, "session_id": "KUNR"}
+{"timestamp": "2026-04-16T20:29:20.461030", "category": "food", "score": 444, "threshold": 200, "eligible": true, "won": true, "code": "VJFG27", "wish_num": 1, "total_wishes": 2, "session_id": "3ZMD"}
+{"timestamp": "2026-04-16T20:29:20.462024", "category": "food", "score": 444, "threshold": 200, "eligible": true, "won": false, "code": null, "wish_num": 2, "total_wishes": 2, "session_id": "HKLE"}
+{"timestamp": "2026-04-16T20:36:34.287699", "category": "food", "score": 624, "threshold": 200, "eligible": true, "won": true, "code": "H4VATT", "wish_num": 1, "total_wishes": 3, "session_id": "ND3F"}
+{"timestamp": "2026-04-16T20:36:34.287699", "category": "food", "score": 624, "threshold": 200, "eligible": true, "won": false, "code": null, "wish_num": 2, "total_wishes": 3, "session_id": "TD9R"}
+{"timestamp": "2026-04-16T20:36:34.289098", "category": "food", "score": 624, "threshold": 200, "eligible": true, "won": true, "code": "QTLKHQ", "wish_num": 3, "total_wishes": 3, "session_id": "DXTX"}
+{"timestamp": "2026-04-16T20:37:58.828278", "category": "food", "score": 470, "threshold": 200, "eligible": true, "won": true, "code": "M23LZ9", "wish_num": 1, "total_wishes": 2, "session_id": "N6CP"}
+{"timestamp": "2026-04-16T20:37:58.829268", "category": "food", "score": 470, "threshold": 200, "eligible": true, "won": false, "code": null, "wish_num": 2, "total_wishes": 2, "session_id": "ZXXA"}

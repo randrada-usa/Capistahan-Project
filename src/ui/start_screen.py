@@ -1,3 +1,7 @@
+"""
+start_screen.py - Fixed with BUTTONSTART.mp3 SFX
+"""
+
 import pygame
 import cv2
 import os
@@ -14,23 +18,18 @@ def get_mouse_pos_virtual():
     actual_w, actual_h = actual_surface.get_size()
     virtual_w, virtual_h = 1920, 1080
     
-    # Calculate the same scaling as scale_and_flip
     scale = min(actual_w / virtual_w, actual_h / virtual_h)
     new_w = int(virtual_w * scale)
     new_h = int(virtual_h * scale)
     
-    # Calculate letterbox offset
     offset_x = (actual_w - new_w) // 2
     offset_y = (actual_h - new_h) // 2
     
-    # Get actual mouse pos
     mx, my = pygame.mouse.get_pos()
     
-    # Check if mouse is in the black bars (outside game area)
     if mx < offset_x or mx >= offset_x + new_w or my < offset_y or my >= offset_y + new_h:
-        return None  # Mouse is in black bars, not on game
+        return None
     
-    # Transform to virtual coordinates
     virtual_x = int((mx - offset_x) / scale)
     virtual_y = int((my - offset_y) / scale)
     
@@ -66,15 +65,13 @@ def fade(screen, width, height, fade_in=True, speed=5):
 class UIFallingManager:
     """Manages the decorative falling items in the menu background."""
     
-    # Rarity drop rates (same as gameplay)
     RARITY_WEIGHTS = {
-        Rarity.VERY_COMMON: 0.35,  # 35%
-        Rarity.COMMON: 0.40,       # 40%
-        Rarity.RARE: 0.20,         # 20%
-        Rarity.ULTRA_RARE: 0.05    # 5%
+        Rarity.VERY_COMMON: 0.35,
+        Rarity.COMMON: 0.40,
+        Rarity.RARE: 0.20,
+        Rarity.ULTRA_RARE: 0.05
     }
     
-    # All categories for variety
     CATEGORIES = ['food', 'people']
     
     def __init__(self, screen_width, screen_height, assets=None):
@@ -88,7 +85,6 @@ class UIFallingManager:
         x = random.randint(60, self.screen_width - 60)
         item_type = 'good'
         
-        # Weighted rarity
         rarities = list(self.RARITY_WEIGHTS.keys())
         weights = list(self.RARITY_WEIGHTS.values())
         rarity = random.choices(rarities, weights=weights, k=1)[0]
@@ -96,10 +92,8 @@ class UIFallingManager:
         speed = random.uniform(2, 4)
         item = FallingItem(x, item_type, rarity, speed, self.assets, None)
         
-        # Random category
         category = random.choice(self.CATEGORIES)
         
-        # Map rarity to prefix
         rarity_prefixes = {
             Rarity.VERY_COMMON: 'ultracommon',
             Rarity.COMMON: 'common',
@@ -108,10 +102,7 @@ class UIFallingManager:
         }
         prefix = rarity_prefixes[rarity]
         
-        # Use cross-category key: "food_common", "culture_rare", "people_ultrarare"
         item.item_key = f'{category}_{prefix}'
-        
-        # Store category for glow effects
         item.category = category
         
         self.items.append(item)
@@ -145,6 +136,18 @@ class StartScreen:
         self.sounds = manager.sounds
         self.music_paths = manager.music_paths
 
+        # ✅ LOAD BUTTONSTART.mp3 SFX
+        self.button_sfx = None
+        button_sfx_path = os.path.join("assets", "audio", "BUTTONSTART.mp3")
+        if os.path.exists(button_sfx_path):
+            try:
+                self.button_sfx = pygame.mixer.Sound(button_sfx_path)
+                print(f"[StartScreen] Loaded BUTTONSTART.mp3")
+            except Exception as e:
+                print(f"[StartScreen] Failed to load BUTTONSTART.mp3: {e}")
+        else:
+            print(f"[StartScreen] BUTTONSTART.mp3 not found at {button_sfx_path}")
+
         if not pygame.mixer.music.get_busy(): 
             try:
                 pygame.mixer.music.load(self.music_paths['menu'])
@@ -156,7 +159,7 @@ class StartScreen:
         self.title_img = self.assets_dict.get('title2')
         self.start_button = self.assets_dict.get('start_button')
 
-        # ✅ LOAD COLLAB LOGOS
+        # Load logos
         try:
             self.logo_6byte = pygame.image.load("assets/ui/6BYTE3.png").convert_alpha()
             self.logo_cgg = pygame.image.load("assets/ui/CGG.png").convert_alpha()
@@ -167,7 +170,6 @@ class StartScreen:
             self.logo_cgg = None
             self.logo_capiz = None
 
-        # Optional scaling for logos
         if self.logo_6byte:
             self.logo_6byte = pygame.transform.smoothscale(self.logo_6byte, (150, 150))
         if self.logo_cgg:
@@ -204,11 +206,15 @@ class StartScreen:
         self.button_hovering = False
         self.falling = UIFallingManager(screen_width, screen_height, self.assets_dict)
         self.font_hints = pygame.font.Font(None, 48)
-        
-        # ✅ FONT FOR "X"
         self.font_x = pygame.font.Font(None, 72)
-
         self.snapshot = None
+
+    def _play_button_sound(self):
+        """✅ Play BUTTONSTART.mp3 sound effect"""
+        if self.button_sfx:
+            self.button_sfx.play()
+        elif 'click' in self.sounds:
+            self.sounds['click'].play()
 
     def handle_event(self, event):
         virtual_pos = get_mouse_pos_virtual()
@@ -221,25 +227,18 @@ class StartScreen:
 
         if event.type == pygame.KEYDOWN:
             if event.key in (pygame.K_RETURN, pygame.K_SPACE):
-                # Play start button SFX
-                if 'start_button_sfx' in self.sounds and self.sounds['start_button_sfx']:
-                    self.sounds['start_button_sfx'].play()
-                elif 'click' in self.sounds and self.sounds['click']:
-                    self.sounds['click'].play()  # Fallback to click sound
+                self._play_button_sound()  # ✅ Play SFX
                 return 'start'
             if event.key == pygame.K_ESCAPE:
                 return 'quit'
 
         if event.type == pygame.MOUSEBUTTONDOWN:
             if virtual_pos and self.button_rect.collidepoint(virtual_pos):
-                # Play start button SFX
-                if 'start_button_sfx' in self.sounds and self.sounds['start_button_sfx']:
-                    self.sounds['start_button_sfx'].play()
-                elif 'click' in self.sounds and self.sounds['click']:
-                    self.sounds['click'].play()  # Fallback to click sound
+                self._play_button_sound()  # ✅ Play SFX
                 return 'start'
         
         return None
+    
     def capture_snapshot(self, screen):
         self.snapshot = screen.copy()
         return self.snapshot
@@ -263,9 +262,8 @@ class StartScreen:
 
         self.falling.render(screen)
             
-        
         if self.title_img:
-                screen.blit(self.title_img, self.title_rect)
+            screen.blit(self.title_img, self.title_rect)
         
         if self.start_button:
             if self.button_hovering:
@@ -276,12 +274,10 @@ class StartScreen:
             else:
                 screen.blit(self.start_button, self.button_rect)
 
-        # ✅ DRAW COLLAB LOGOS (REPLACES PROTOTYPE TEXT)
+        # Draw logos
         center_x = self.screen_width // 2
-
-        # ✅ TOP LOGO BAR (6BYTE - CAPIZTAHAN - CGG)
         spacing = 20
-        top_y = 20  # controls how far from top
+        top_y = 20
 
         if self.logo_6byte and self.logo_capiz and self.logo_cgg:
             total_width = (
@@ -293,16 +289,10 @@ class StartScreen:
             )
 
             start_x = self.screen_width // 2 - total_width // 2
-
-            # 6BYTE
             screen.blit(self.logo_6byte, (start_x, top_y))
             start_x += self.logo_6byte.get_width() + spacing
-
-            # CAPIZTAHAN
             screen.blit(self.logo_capiz, (start_x, top_y))
             start_x += self.logo_capiz.get_width() + spacing
-
-            # CGG
             screen.blit(self.logo_cgg, (start_x, top_y))
 
         space_hint = self._render_text_with_border("Press 'SPACE' to Play", self.font_hints, (255, 255, 255), (0, 0, 0))
@@ -327,7 +317,6 @@ def show_start_screen(screen, screen_width=1920, screen_height=1080,
             if event.type == pygame.QUIT:
                 return False, None
             
-            # HANDLE RESIZE: Update display mode to get new surface
             if event.type == pygame.VIDEORESIZE:
                 pygame.display.set_mode((event.w, event.h), pygame.RESIZABLE)
                 continue
@@ -340,7 +329,6 @@ def show_start_screen(screen, screen_width=1920, screen_height=1080,
             elif action == 'quit':
                 return False, None
         
-        # UPDATE CAMERA FEED
         if gesture_controller:
             gesture_controller.update()
             debug_frame = gesture_controller.get_debug_frame()
@@ -348,9 +336,6 @@ def show_start_screen(screen, screen_width=1920, screen_height=1080,
                 cv2.imshow("GAMEFRICKS PROTOTYPE01 - Camera Feed", debug_frame)
                 cv2.waitKey(1)
         
-        # Update and render UI to virtual screen
         start_screen.falling.update(dt)
         start_screen.render(screen)
-        
-        # Scale to actual display and flip
         do_flip(screen)
