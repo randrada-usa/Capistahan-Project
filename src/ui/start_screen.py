@@ -221,20 +221,25 @@ class StartScreen:
 
         if event.type == pygame.KEYDOWN:
             if event.key in (pygame.K_RETURN, pygame.K_SPACE):
-                if 'click' in self.sounds and self.sounds['click']:
-                    self.sounds['click'].play()
+                # Play start button SFX
+                if 'start_button_sfx' in self.sounds and self.sounds['start_button_sfx']:
+                    self.sounds['start_button_sfx'].play()
+                elif 'click' in self.sounds and self.sounds['click']:
+                    self.sounds['click'].play()  # Fallback to click sound
                 return 'start'
             if event.key == pygame.K_ESCAPE:
                 return 'quit'
 
         if event.type == pygame.MOUSEBUTTONDOWN:
             if virtual_pos and self.button_rect.collidepoint(virtual_pos):
-                if 'click' in self.sounds and self.sounds['click']:
-                    self.sounds['click'].play()
+                # Play start button SFX
+                if 'start_button_sfx' in self.sounds and self.sounds['start_button_sfx']:
+                    self.sounds['start_button_sfx'].play()
+                elif 'click' in self.sounds and self.sounds['click']:
+                    self.sounds['click'].play()  # Fallback to click sound
                 return 'start'
         
         return None
-
     def capture_snapshot(self, screen):
         self.snapshot = screen.copy()
         return self.snapshot

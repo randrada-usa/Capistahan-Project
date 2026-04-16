@@ -179,17 +179,49 @@ class AssetManager:
         self._load_shared('perla_default', os.path.join("sprites", "Perla (default).png"), (150, 150))
         
         # === AUDIO ===
-        self._load_audio('click', os.path.join("audio", "Start (mp3cut.net).mp3"))
+        self._load_audio('click', os.path.join("audio", "Start (BUTTONSTART.mp3"))
         self._load_audio('good', os.path.join("audio", "Good item (mp3cut.net).mp3"))
         self._load_audio('bad', os.path.join("audio", "Bad item (mp3cut.net).mp3"))
         self._load_audio('minus_life', os.path.join("audio", "minus 1 (mp3cut.net).mp3"))
         self._load_audio('plus_score', os.path.join("audio", "plus 1 (mp3cut.net).mp3"))
-        
+
+               # === NEW SFX ===
+        self._load_audio('wheel_spin', os.path.join("audio", "SPIN.mp3"))
+        self._load_audio('button_click', os.path.join("audio", "BUTTONSTART.mp3"))
+        self._load_audio('start_button_sfx', os.path.join("audio", "BUTTONSTART.mp3"))
+
         # === MUSIC ===
-        menu_music = os.path.join(self.base_path, "audio", "Menu theme v3.mp3")
-        ingame_music = os.path.join(self.base_path, theme, "audio", "In game theme.mp3")
-        if not os.path.exists(ingame_music):
+        theme = self.theme_manager.get_theme()
+        log(f"[AssetManager] Setting up music for theme: {theme}")
+        
+        # Menu music (shared)
+        menu_music = os.path.join(self.base_path, "audio", "MENU(FINAL).mp3")  # Default to PEOPLE theme music for menu
+        log(f"[AssetManager] Looking for menu music at: {menu_music}")
+        log(f"[AssetManager] Menu music exists: {os.path.exists(menu_music)}")
+        
+        # Theme-specific gameplay music
+        if theme == 'food':
+            ingame_music = os.path.join(self.base_path, "audio", "FOOD.mp3")
+        elif theme == 'culture':
+            ingame_music = os.path.join(self.base_path, "audio", "CULTURE.mp3")
+        elif theme == 'people':
+            ingame_music = os.path.join(self.base_path, "audio", "MENU(FINAL).mp3")
+        else:
             ingame_music = os.path.join(self.base_path, "audio", "In game theme v2.mp3")
+        
+        log(f"[AssetManager] Looking for theme music at: {ingame_music}")
+        log(f"[AssetManager] Theme music exists: {os.path.exists(ingame_music)}")
+        
+        # Fallbacks if files don't exist
+        if not os.path.exists(menu_music):
+            log(f"[AssetManager] FALLBACK: Using default menu music")
+            menu_music = os.path.join(self.base_path, "audio", "Menu theme v3.mp3")
+        if not os.path.exists(ingame_music):
+            log(f"[AssetManager] FALLBACK: Using default ingame music for {theme}")
+            ingame_music = os.path.join(self.base_path, "audio", "In game theme v2.mp3")
+        
+        log(f"[AssetManager] Final menu music: {os.path.basename(menu_music)}")
+        log(f"[AssetManager] Final ingame music: {os.path.basename(ingame_music)}")
         
         self.music_paths = {
             'menu': menu_music,
@@ -278,5 +310,49 @@ class AssetManager:
         """Get theme manager."""
         return self.theme_manager
     
+    def play_music(self, music_type, loops=-1, fade_ms=500):
+        """
+        Play background music by type.
+        music_type: 'menu' or 'ingame'
+        """
+        if music_type not in self.music_paths:
+            log(f"[AssetManager] Unknown music type: {music_type}")
+            return
+        
+        music_path = self.music_paths[music_type]
+        
+        if not os.path.exists(music_path):
+            log(f"[AssetManager] Music file not found: {music_path}")
+            return
+        
+        try:
+            # Fade out current music if playing
+            if pygame.mixer.music.get_busy():
+                pygame.mixer.music.fadeout(300)
+                pygame.time.wait(300)
+            
+            pygame.mixer.music.load(music_path)
+            pygame.mixer.music.set_volume(0.5)
+            pygame.mixer.music.play(loops, fade_ms=fade_ms)
+            log(f"[AssetManager] Playing {music_type} music: {os.path.basename(music_path)}")
+        except Exception as e:
+            log(f"[AssetManager] Error playing music: {e}")
 
-    
+    def switch_theme_music(self, new_theme):
+        """Change music when switching themes mid-game."""
+        if new_theme == 'food':
+            music_file = "FOOD.mp3"
+        elif new_theme == 'culture':
+            music_file = "CULTURE.mp3"
+        elif new_theme == 'people':
+            music_file = "PEOPLE.mp3"
+        else:
+            music_file = "In game theme v2.mp3"
+        
+        new_path = os.path.join(self.base_path, "audio", "new_bg_music", music_file)
+        
+        if os.path.exists(new_path):
+            self.music_paths['ingame'] = new_path
+            self.play_music('ingame')
+        else:
+            log(f"[AssetManager] Theme music not found: {new_path}")
