@@ -47,7 +47,7 @@ class FallingItem:
         self.rarity = rarity
         self.speed = speed
         self.assets = asset_manager
-        
+
         # Get theme category
         if theme_manager:
             self.category = theme_manager.get_theme()
@@ -103,6 +103,8 @@ class FallingItem:
                     # Center on item
                     glow_rect = scaled_glow.get_rect(center=(int(self.x), int(self.y)))
                     screen.blit(scaled_glow, glow_rect)
+
+                    
         
         # 2. Draw the actual item using the generated asset key
         if self.assets:
@@ -289,6 +291,21 @@ class ObjectManager:
             if item.get_hitbox().colliderect(player_hitbox):
                 caught.append(item)
                 self.items.remove(item)
+
+                caught.append(item)
+                # Play glow SFX when catching glowing items
+                if item.type == 'good' and item.rarity != Rarity.VERY_COMMON and self.assets:
+                    glow_sfx = None
+                    if item.rarity == Rarity.COMMON:
+                        glow_sfx = self.assets.get('blue')
+                    elif item.rarity == Rarity.RARE:
+                        glow_sfx = self.assets.get('red')
+                    elif item.rarity == Rarity.ULTRA_RARE:
+                        glow_sfx = self.assets.get('gold')
+                    elif item.rarity == Rarity.WISH:
+                        glow_sfx = self.assets.get('uber_rare')
+                    if glow_sfx:
+                        glow_sfx.play()
 
         # REMOVED: No penalty for missed items in timer mode
         # Just reset the counter for next frame

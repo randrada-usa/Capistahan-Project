@@ -1,3 +1,7 @@
+"""
+end_screen.py - Fixed with SFX playing at video START and bg music stopped
+"""
+
 import pygame
 import cv2
 import os
@@ -8,10 +12,16 @@ from src.game.asset_manager import AssetManager
 from src.game.wish_system import make_wish
 
 
-def play_wish_video(screen, video_path, scale_func=None):
+def play_wish_video(screen, video_path, scale_func=None, sfx_sound=None):
     """
     Play a wish video using OpenCV.
     Press any key or click to skip.
+    
+    Args:
+        screen: pygame screen surface
+        video_path: path to video file
+        scale_func: function to scale and flip screen
+        sfx_sound: pygame Sound object to play when video starts
     """
     if not video_path or not os.path.exists(video_path):
         print(f"[play_wish_video] Video not found: {video_path}")
@@ -28,10 +38,29 @@ def play_wish_video(screen, video_path, scale_func=None):
     
     print(f"[play_wish_video] Playing: {video_path}")
     
+    # ✅ STOP BACKGROUND MUSIC AND PLAY SFX AT VIDEO START
+    first_frame = True
+    sfx_played = False
+    
     while True:
         ret, frame = cap.read()
         if not ret:
             break
+        
+        # ✅ On first frame: stop bg music and play SFX
+        if first_frame:
+            # Stop background music
+            if pygame.mixer.music.get_busy():
+                pygame.mixer.music.stop()
+                print("[play_wish_video] Stopped background music")
+            
+            # Play SFX
+            if sfx_sound and not sfx_played:
+                sfx_sound.play()
+                sfx_played = True
+                print(f"[play_wish_video] Playing SFX at video start")
+            
+            first_frame = False
         
         # Handle skip events
         for event in pygame.event.get():
@@ -71,23 +100,18 @@ def get_mouse_pos_virtual():
     actual_w, actual_h = actual_surface.get_size()
     virtual_w, virtual_h = 1920, 1080
     
-    # Calculate the same scaling as scale_and_flip
     scale = min(actual_w / virtual_w, actual_h / virtual_h)
     new_w = int(virtual_w * scale)
     new_h = int(virtual_h * scale)
     
-    # Calculate letterbox offset
     offset_x = (actual_w - new_w) // 2
     offset_y = (actual_h - new_h) // 2
     
-    # Get actual mouse pos
     mx, my = pygame.mouse.get_pos()
     
-    # Check if mouse is in the black bars (outside game area)
     if mx < offset_x or mx >= offset_x + new_w or my < offset_y or my >= offset_y + new_h:
-        return None  # Mouse is in black bars, not on game
+        return None
     
-    # Transform to virtual coordinates
     virtual_x = int((mx - offset_x) / scale)
     virtual_y = int((my - offset_y) / scale)
     
@@ -96,7 +120,6 @@ def get_mouse_pos_virtual():
 class UIFallingManager:
     """Manages decorative falling items for the background."""
     
-    # Rarity drop rates
     RARITY_WEIGHTS = {
         Rarity.VERY_COMMON: 0.35,
         Rarity.COMMON: 0.40,
@@ -117,7 +140,6 @@ class UIFallingManager:
         x = random.randint(60, self.screen_width - 60)
         item_type = 'good'
         
-        # Weighted rarity
         rarities = list(self.RARITY_WEIGHTS.keys())
         weights = list(self.RARITY_WEIGHTS.values())
         rarity = random.choices(rarities, weights=weights, k=1)[0]
@@ -125,10 +147,8 @@ class UIFallingManager:
         speed = random.uniform(2, 4)
         item = FallingItem(x, item_type, rarity, speed, self.assets, None)
         
-        # Random category
         category = random.choice(self.CATEGORIES)
         
-        # Map rarity to prefix
         rarity_prefixes = {
             Rarity.VERY_COMMON: 'ultracommon',
             Rarity.COMMON: 'common',
@@ -137,10 +157,7 @@ class UIFallingManager:
         }
         prefix = rarity_prefixes[rarity]
         
-        # Use cross-category key: "food_common", "culture_rare", "people_ultrarare"
         item.item_key = f'{category}_{prefix}'
-        
-        # Store category for glow effects
         item.category = category
         
         self.items.append(item)
@@ -189,7 +206,7 @@ class EndScreen:
     def __init__(self, screen_width=1920, screen_height=1080, show_wish_button=True):
         self.screen_width = screen_width
         self.screen_height = screen_height
-        self.show_wish_button = show_wish_button  # False when auto wish (loss)
+        self.show_wish_button = show_wish_button
 
         self.font_score = pygame.font.Font(None, 74)
         self.font_high = pygame.font.Font(None, 48)
@@ -201,6 +218,37 @@ class EndScreen:
         self.assets_dict = manager.assets
         self.sounds = manager.sounds
         self.music_paths = manager.music_paths
+
+        # ✅ LOAD BUTTONSTART.mp3 SFX for buttons
+        self.button_sfx = None
+        button_sfx_path = os.path.join("assets", "audio", "BUTTONSTART.mp3")
+        if os.path.exists(button_sfx_path):
+            try:
+                self.button_sfx = pygame.mixer.Sound(button_sfx_path)
+                print(f"[EndScreen] Loaded BUTTONSTART.mp3")
+            except Exception as e:
+                print(f"[EndScreen] Failed to load BUTTONSTART.mp3: {e}")
+
+        # ✅ LOAD WISH SFX
+        self.wish_good_sfx = None
+        self.wish_bad_sfx = None
+        
+        good_sfx_path = os.path.join("assets", "audio", "GOOD.mp3")
+        bad_sfx_path = os.path.join("assets", "audio", "BAD.mp3")
+        
+        if os.path.exists(good_sfx_path):
+            try:
+                self.wish_good_sfx = pygame.mixer.Sound(good_sfx_path)
+                print(f"[EndScreen] Loaded GOOD.mp3 (wish granted SFX)")
+            except Exception as e:
+                print(f"[EndScreen] Failed to load GOOD.mp3: {e}")
+            
+        if os.path.exists(bad_sfx_path):
+            try:
+                self.wish_bad_sfx = pygame.mixer.Sound(bad_sfx_path)
+                print(f"[EndScreen] Loaded BAD.mp3 (no wish SFX)")
+            except Exception as e:
+                print(f"[EndScreen] Failed to load BAD.mp3: {e}")
 
         self.button_scale = 0.5 
         
@@ -255,6 +303,7 @@ class EndScreen:
         self.wish_result = None
         self.showing_wish_modal = False
         self.game_state = None
+        self.wish_used = False
 
         if not pygame.mixer.music.get_busy():
             try:
@@ -271,8 +320,14 @@ class EndScreen:
     def set_game_state(self, game_state):
         self.game_state = game_state
 
+    def _play_button_sound(self):
+        """✅ Play BUTTONSTART.mp3 sound effect"""
+        if self.button_sfx:
+            self.button_sfx.play()
+        elif 'click' in self.sounds:
+            self.sounds['click'].play()
+
     def handle_event(self, event):
-        # Get virtual mouse position for accurate hit detection
         virtual_pos = get_mouse_pos_virtual()
         
         if self.showing_wish_modal:
@@ -293,21 +348,21 @@ class EndScreen:
 
         if event.type == pygame.KEYDOWN:
             if event.key in (pygame.K_RETURN, pygame.K_SPACE, pygame.K_r):
-                if 'click' in self.sounds: self.sounds['click'].play()
+                self._play_button_sound()
                 return "retry"
             if event.key == pygame.K_ESCAPE:
                 return "quit"
 
         if event.type == pygame.MOUSEBUTTONDOWN and virtual_pos:
-            if self.wish_rect.collidepoint(virtual_pos) and self.game_state and self.game_state.is_wish_eligible() and not self.wish_used:
-                if 'click' in self.sounds: self.sounds['click'].play()
+            if self.wish_rect.collidepoint(virtual_pos) and self.game_state and hasattr(self.game_state, 'is_wish_eligible') and self.game_state.is_wish_eligible() and not self.wish_used:
+                self._play_button_sound()
                 self._make_wish()
                 return None
             if self.retry_rect.collidepoint(virtual_pos):
-                if 'click' in self.sounds: self.sounds['click'].play()
+                self._play_button_sound()
                 return "retry"
             if self.menu_rect.collidepoint(virtual_pos):
-                if 'click' in self.sounds: self.sounds['click'].play()
+                self._play_button_sound()
                 return "menu"
 
         return None
@@ -316,7 +371,7 @@ class EndScreen:
         if self.game_state and not self.wish_used:
             self.wish_result = self.game_state.resolve_wish()
             self.showing_wish_modal = True
-            self.wish_used = True  # Mark as used
+            self.wish_used = True
 
     def _render_text_with_border(self, text, font, text_color, border_color, border_width=2):
         text_surface = font.render(text, True, text_color)
@@ -369,7 +424,9 @@ class EndScreen:
         if not self.show_wish_button or self.showing_wish_modal:
             return
         
-        status = self.game_state.get_wish_status() if self.game_state else None
+        status = None
+        if self.game_state and hasattr(self.game_state, 'get_wish_status'):
+            status = self.game_state.get_wish_status()
         
         if eligible:
             btn_img = self.wish_btn_img
@@ -423,7 +480,10 @@ class EndScreen:
             record_text = self._render_text_with_border("NEW RECORD!", self.font_high, (255, 215, 0), (0, 0, 0))
             screen.blit(record_text, record_text.get_rect(center=(center_x, score_y + 110)))
 
-        eligible = self.game_state.is_wish_eligible() if self.game_state else False
+        eligible = False
+        if self.game_state and hasattr(self.game_state, 'is_wish_eligible'):
+            eligible = self.game_state.is_wish_eligible()
+        
         self._draw_wish_button(screen, eligible)
 
         for btn_img, btn_rect, is_hover in [
@@ -450,47 +510,76 @@ class EndScreen:
         if self.showing_wish_modal:
             self._draw_wish_modal(screen)
 
+
 def show_end_screen(screen, game_state, 
                     background_snapshot=None, screen_width=1920, screen_height=1080,
                     gesture_controller=None, scale_func=None):
+    """
+    Shows the end screen.
+    
+    Returns:
+        "retry" - Player wants to retry (go to wheel)
+        "menu" - Player wants to go to menu/start screen
+        None - Error or quit
+    """
+    # Create EndScreen early to access SFX sounds
+    end_screen = EndScreen(screen_width, screen_height, show_wish_button=False)
+    
     # Auto-resolve wish when game ends
     wish_result = make_wish(game_state.score, game_state.theme if hasattr(game_state, 'theme') else 'food')
     
-    # Play all videos sequentially
+    # ✅ Play all videos sequentially WITH SFX playing at video start (bg music stopped)
     if wish_result.get('video_paths'):
-        for video_path in wish_result['video_paths']:
-            play_wish_video(screen, video_path, scale_func)
+        for i, video_path in enumerate(wish_result['video_paths']):
+            # Determine which SFX to play based on win/loss
+            is_win = False
+            if wish_result.get('wishes') and i < len(wish_result['wishes']):
+                is_win = wish_result['wishes'][i].get('won', False)
+            else:
+                is_win = wish_result.get('won', False)
+            
+            # Select appropriate SFX
+            sfx_to_play = None
+            if is_win:
+                sfx_to_play = end_screen.wish_good_sfx  # GOOD.mp3
+                print(f"[show_end_screen] Will play GOOD.mp3 with win video (bg music will stop)")
+            else:
+                sfx_to_play = end_screen.wish_bad_sfx   # BAD.mp3
+                print(f"[show_end_screen] Will play BAD.mp3 with loss video (bg music will stop)")
+            
+            # ✅ Play video with SFX starting at the same time (bg music stops automatically)
+            play_wish_video(screen, video_path, scale_func, sfx_to_play)
     
-    # If any win, go directly to start (return False to go back to menu/start)
+    # Check result and return appropriate action
     if wish_result.get('won'):
-        return False  # Goes back to start screen
+        return "menu"  # Goes back to start screen if won
     
     # If all losses, show end screen without wish button
-    end_screen = EndScreen(screen_width, screen_height, show_wish_button=False)
-    
     final_score = game_state.score
-    high_score = game_state.high_score
-    is_new_record = game_state.is_new_high_score()
+    high_score = game_state.high_score if hasattr(game_state, 'high_score') else 0
+    is_new_record = hasattr(game_state, 'is_new_high_score') and game_state.is_new_high_score()
     
     end_screen.set_scores(final_score, high_score, is_new_record)
     end_screen.set_game_state(game_state)
     
     # Store wish result for display in modal (show first loss message)
     if wish_result.get('wishes'):
-        end_screen.wish_result = wish_result['wishes'][0]  # Show first wish result
+        end_screen.wish_result = wish_result['wishes'][0]
     else:
         end_screen.wish_result = wish_result
-    end_screen.showing_wish_modal = True  # Show the result modal immediately
+    end_screen.showing_wish_modal = True
     
     clock = pygame.time.Clock()
     do_flip = scale_func if scale_func else lambda s: pygame.display.flip()
     
-    while True:
+    running = True
+    while running:
         dt = clock.tick(60) / 1000
         
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
-                pygame.quit(); exit()
+                pygame.quit()
+                exit()
             
             # HANDLE RESIZE
             if event.type == pygame.VIDEORESIZE:
@@ -498,13 +587,16 @@ def show_end_screen(screen, game_state,
                 continue
             
             action = end_screen.handle_event(event)
+            
             if action == "retry":
-                pygame.mixer.music.fadeout(1000) 
-                return True
+                pygame.mixer.music.fadeout(1000)
+                return "retry"
             elif action == "menu":
-                return False
+                pygame.mixer.music.fadeout(1000)
+                return "menu"
             elif action == "quit":
-                return False
+                pygame.quit()
+                exit()
         
         if gesture_controller:
             gesture_controller.update()
@@ -517,34 +609,4 @@ def show_end_screen(screen, game_state,
         end_screen.render(screen, background_snapshot)
         do_flip(screen)
     
-    while True:
-        dt = clock.tick(60) / 1000
-        
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                pygame.quit(); exit()
-            
-            # HANDLE RESIZE
-            if event.type == pygame.VIDEORESIZE:
-                pygame.display.set_mode((event.w, event.h), pygame.RESIZABLE)
-                continue
-            
-            action = end_screen.handle_event(event)
-            if action == "retry":
-                pygame.mixer.music.fadeout(1000) 
-                return True
-            elif action == "menu":
-                return False
-            elif action == "quit":
-                return False
-        
-        if gesture_controller:
-            gesture_controller.update()
-            debug_frame = gesture_controller.get_debug_frame()
-            if debug_frame is not None:
-                cv2.imshow("GAMEFRICKS PROTOTYPE01 - Camera Feed", debug_frame)
-                cv2.waitKey(1)
-        
-        end_screen.falling.update(dt)
-        end_screen.render(screen, background_snapshot)
-        do_flip(screen)
+    return "menu"

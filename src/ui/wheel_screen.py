@@ -198,6 +198,13 @@ class WheelScreen:
                 self.pop_progress = 1.0
                 self.state = self.STATE_SPINNING
                 self.spin_start_time = current_time
+                
+                # 👉 PLAY SPIN SOUND HERE
+                if self.assets:
+                    spin_sound = self.assets.get_sound('wheel_spin')
+                    if spin_sound:
+                        spin_sound.play()
+                        print("[Wheel] Playing spin sound")
             
             eased = self._ease_out_back(self.pop_progress)
             self.current_scale = max(0.0, eased)

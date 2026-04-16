@@ -68,7 +68,6 @@ class Game:
         self.virtual_h = 1080
         
         # Start with a smaller window so user can resize (1280x720 is good for 2560x1600)
-        # It will scale up to fill the space with black bars if needed
         initial_window_w = 1280
         initial_window_h = 720
         
@@ -111,6 +110,9 @@ class Game:
         # Load wheel assets once (shared across all screens)
         print("[Game] Loading wheel assets...")
         self.wheel_assets = AssetManager().load_all()
+        
+        # === PLAY MENU MUSIC AT START ===
+        self.wheel_assets.play_music('menu')
     
     def init_cv(self):
         """Initialize Gesture Controller."""
@@ -183,6 +185,9 @@ class Game:
                     print(f"[Game] Error loading assets: {e}")
                     continue
                 
+                # === PLAY THEME-SPECIFIC GAME MUSIC ===
+                self.assets.play_music('ingame')
+                
                 # 4. GAMEPLAY LOOP
                 print("[Game] Starting gameplay loop...")
                 game_loop = GameLoop(
@@ -217,9 +222,11 @@ class Game:
                 
                 if retry:
                     print("[Game] Player chose retry - going to wheel")
+                    self.wheel_assets.play_music('menu')
                     continue
                 else:
                     print("[Game] Player chose menu - going to start")
+                    self.wheel_assets.play_music('menu')
                     continue
                     
         except Exception as e:
