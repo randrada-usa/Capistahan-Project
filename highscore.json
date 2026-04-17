@@ -1,6 +1,38 @@
 {
   "high_scores": [
     {
+      "score": 1400,
+      "date": "2026-04-16 22:50",
+      "is_new": true,
+      "category": "people",
+      "category_display": "Capiz Community",
+      "best_catch": "Wish People",
+      "catches": {
+        "very_common": 8,
+        "common": 20,
+        "rare": 12,
+        "ultra_rare": 0,
+        "wish": 4
+      },
+      "multiplier": 1.5
+    },
+    {
+      "score": 1200,
+      "date": "2026-04-16 22:47",
+      "is_new": true,
+      "category": "culture",
+      "category_display": "Capiz Traditions",
+      "best_catch": "Wish Culture",
+      "catches": {
+        "very_common": 4,
+        "common": 8,
+        "rare": 20,
+        "ultra_rare": 0,
+        "wish": 4
+      },
+      "multiplier": 1.2
+    },
+    {
       "score": 1086,
       "date": "2026-04-12 17:57",
       "is_new": true,
@@ -17,6 +49,21 @@
       "multiplier": 1.5
     },
     {
+      "score": 1040,
+      "date": "2026-04-16 23:18",
+      "is_new": true,
+      "category": "food",
+      "category_display": "Capiz Cuisine",
+      "best_catch": "Rare Food",
+      "catches": {
+        "very_common": 8,
+        "common": 40,
+        "rare": 24,
+        "ultra_rare": 0
+      },
+      "multiplier": 1.0
+    },
+    {
       "score": 922,
       "date": "2026-04-13 17:38",
       "is_new": true,
@@ -28,52 +75,6 @@
         "common": 4,
         "rare": 10,
         "ultra_rare": 6
-      },
-      "multiplier": 1.5
-    },
-    {
-      "score": 848,
-      "date": "2026-04-12 17:55",
-      "is_new": true,
-      "category": "people",
-      "category_display": "Capiz Community",
-      "best_catch": "Ultra Rare People",
-      "catches": {
-        "very_common": 2,
-        "common": 6,
-        "rare": 12,
-        "ultra_rare": 4
-      },
-      "multiplier": 1.5
-    },
-    {
-      "score": 772,
-      "date": "2026-04-15 14:45",
-      "is_new": true,
-      "category": "people",
-      "category_display": "Capiz Community",
-      "best_catch": "Wish People",
-      "catches": {
-        "very_common": 10,
-        "common": 2,
-        "rare": 6,
-        "ultra_rare": 2,
-        "wish": 2
-      },
-      "multiplier": 1.5
-    },
-    {
-      "score": 744,
-      "date": "2026-04-13 20:52",
-      "is_new": true,
-      "category": "people",
-      "category_display": "Capiz Community",
-      "best_catch": "Ultra Rare People",
-      "catches": {
-        "very_common": 6,
-        "common": 12,
-        "rare": 6,
-        "ultra_rare": 4
       },
       "multiplier": 1.5
     }
