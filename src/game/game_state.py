@@ -151,22 +151,19 @@ class GameState:
         """Process caught items with rarity-based scoring."""
         for item in items:
             if item.type == 'good':
-                # Base points from item rarity
+                # Calculate points ONCE
                 base_points = item.get_score_value()
                 points = int(base_points * self.multiplier)
+                
+                # Store old score for milestone detection BEFORE adding
+                old_score = self.score
+                
+                # Add points ONCE
                 self.score += points
                 
                 # Track catches
                 rarity_key = item.rarity.value
                 self.catches_by_rarity[rarity_key] = self.catches_by_rarity.get(rarity_key, 0) + 1
-                
-                # FIXED: Check milestone BEFORE adding score to detect threshold crossing
-                old_score = self.score
-                self.score += points
-                
-                # Update tracking
-                rarity_key = item.rarity.value
-                self.catches_by_rarity[rarity_key] += 1
                 
                 # Track best single catch
                 catch_desc = f"{rarity_key.replace('_', ' ').title()} {self.category.title()}"
@@ -179,11 +176,10 @@ class GameState:
                     }
                 
                 # Fire rarity events for Jen
-
                 if item.rarity == Rarity.WISH:
                     self._trigger_event('wish_caught', {
-                    'points': points,
-                    'message': 'WISH ITEM! +100 Points!'
+                        'points': points,
+                        'message': 'WISH ITEM! +100 Points!'
                     })
                 elif item.rarity == Rarity.RARE:
                     self._trigger_event('rare_caught', {
@@ -204,7 +200,7 @@ class GameState:
                     if self.assets and 'good' in self.assets.sounds:
                         self.assets.sounds['good'].play()
                 
-                # FIXED: Milestone detection
+                # Milestone detection
                 old_milestone = old_score // 50
                 new_milestone = self.score // 50
                 if new_milestone > old_milestone and self.score > 0:

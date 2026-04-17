@@ -40,9 +40,8 @@ class WishSystem:
         """
         Returns how many wishes the player has earned and progress info.
         """
-        total_wishes = score // self.THRESHOLD  # 200 = 1, 400 = 2, 600 = 3, etc.
+        total_wishes = min(2, score // self.THRESHOLD)  # ✅ Cap at max 2 wishes
         progress_to_next = (score % self.THRESHOLD) / self.THRESHOLD
-
         return {
             'total_earned': total_wishes,
             'current_score': score,
