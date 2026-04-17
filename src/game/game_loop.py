@@ -295,15 +295,22 @@ class GameLoop:
         self.perla_hud.update(dt)  # Update Perla animations
         self.corner_chibi.update(dt)
         
-        # Collisions
+        # Collisions - FIX: Collect all caught items first, process once
         caught, _ = self.object_manager.check_collisions(
             self.player.get_hitbox()
         )
         
-        for item in caught:
-            self.game_state.handle_caught([item])
-            # Send reaction to Perla HUD immediately (handles rapid fire)
-            self.perla_hud.react_to_catch(item)
+        # DEBUG: Print what we caught
+        if caught:
+            print(f"[DEBUG] Caught {len(caught)} items: {[item.rarity.name for item in caught]}")
+        
+        # Process all caught items in batch (pass the whole list)
+        if caught:
+            self.game_state.handle_caught(caught)
+            
+            # Perla reacts to each item
+            for item in caught:
+                self.perla_hud.react_to_catch(item)
         
         self.game_state.check_game_over()
 

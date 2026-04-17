@@ -6,8 +6,8 @@ from enum import Enum
 class Rarity(Enum):
     VERY_COMMON = "very_common"  # 5 pts
     COMMON = "common"            # 10 pts
-    RARE = "rare"                # 25 pts
-    ULTRA_RARE = "ultra_rare"    # 50 pts
+    RARE = "rare"                # 20 pts
+    ULTRA_RARE = "ultra_rare"    # 30 pts
     WISH = "wish"
 
 
@@ -17,8 +17,8 @@ class FallingItem:
     SCORE_TABLE = {
         Rarity.VERY_COMMON: 5,
         Rarity.COMMON: 10,
-        Rarity.RARE: 25,
-        Rarity.ULTRA_RARE: 50,
+        Rarity.RARE: 20,
+        Rarity.ULTRA_RARE: 40,
         Rarity.WISH:100
     }
     
@@ -292,7 +292,6 @@ class ObjectManager:
                 caught.append(item)
                 self.items.remove(item)
 
-                caught.append(item)
                 # Play glow SFX when catching glowing items
                 if item.type == 'good' and item.rarity != Rarity.VERY_COMMON and self.assets:
                     glow_sfx = None

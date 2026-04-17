@@ -195,3 +195,5 @@
 {"timestamp": "2026-04-17T09:07:18.192796", "category": "food", "score": 720, "threshold": 200, "eligible": true, "won": true, "code": "HED6HP", "wish_num": 2, "total_wishes": 2, "session_id": "GWTM"}
 {"timestamp": "2026-04-17T09:09:17.926385", "category": "food", "score": 816, "threshold": 200, "eligible": true, "won": true, "code": "YTCVEW", "wish_num": 1, "total_wishes": 2, "session_id": "YHLT"}
 {"timestamp": "2026-04-17T09:09:17.928616", "category": "food", "score": 816, "threshold": 200, "eligible": true, "won": true, "code": "2EYVRQ", "wish_num": 2, "total_wishes": 2, "session_id": "4K6N"}
+{"timestamp": "2026-04-17T09:27:59.440977", "category": "food", "score": 652, "threshold": 200, "eligible": true, "won": false, "code": null, "wish_num": 1, "total_wishes": 2, "session_id": "3EUV"}
+{"timestamp": "2026-04-17T09:27:59.442120", "category": "food", "score": 652, "threshold": 200, "eligible": true, "won": true, "code": "6RR36C", "wish_num": 2, "total_wishes": 2, "session_id": "ZPFT"}
